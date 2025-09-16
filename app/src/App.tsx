@@ -2,6 +2,7 @@ import { AppShell, Group, Image, NavLink, Stack, Title } from '@mantine/core'
 import './App.css'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import Backlog from './pages/backlog'
+import Schedule from './pages/schedule'
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
             <NavLink label="Trips" defaultOpened fw={700} fz="lg">
               <NavLink label="Dubai" defaultOpened>
                 <NavLink label="Backlog" component={Link} to="/dubai/backlog" />
-                <NavLink label="Schedule" />
+                <NavLink label="Schedule" component={Link} to="/dubai/schedule" />
                 <NavLink label="Travel" />
                 <NavLink label="Packing" />
               </NavLink>
@@ -36,6 +37,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dubai/backlog" replace />} />
           <Route path="/dubai/backlog" element={<Backlog />} />
+          <Route path="/dubai/schedule" element={<Schedule />} />
         </Routes>
       </AppShell.Main>
     </AppShell>
