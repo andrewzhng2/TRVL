@@ -1,0 +1,4 @@
+/* Reset Vite demo styles and provide space for AppShell */
+#root {
+  min-height: 100vh;
+}
