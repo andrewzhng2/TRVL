@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Checkbox, Group, Modal, NumberInput, Paper, Rating, ScrollArea, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createBacklogCard, listBacklogCards, deleteBacklogCard, type BacklogCard as ApiBacklogCard } from '../../../api/client'
 
 type ColumnKey = 'hotels' | 'activities' | 'food' | 'clubs'
 
@@ -64,34 +65,71 @@ function BacklogBoard() {
   const CARD_GAP_PX = 8
   const COLUMN_STACK_MAX_HEIGHT = MAX_VISIBLE_CARDS * CARD_MIN_HEIGHT + (MAX_VISIBLE_CARDS - 1) * CARD_GAP_PX
 
+  function mapApiToLocal(card: ApiBacklogCard): BacklogCard {
+    return {
+      id: String(card.id),
+      title: card.title,
+      location: card.location ?? '',
+      distanceFromHotelKm: null,
+      cost: card.cost ?? null,
+      rating: card.rating ?? null,
+      desireToGo: card.desire_to_go ?? null,
+      requiresReservation: card.requires_reservation ?? false,
+      description: card.description ?? '',
+      reserved: card.reserved ?? false,
+      reservationDate: card.reservation_date ?? null,
+      lockedIn: card.locked_in ?? false,
+    }
+  }
+
+  function categoryFromColumn(column: ColumnKey): ApiBacklogCard['category'] {
+    return column
+  }
+
+  useEffect(() => {
+    let mounted = true
+    listBacklogCards()
+      .then(apiCards => {
+        if (!mounted) return
+        const grouped: Record<ColumnKey, BacklogCard[]> = {
+          hotels: [], activities: [], food: [], clubs: [],
+        }
+        for (const c of apiCards) {
+          const col = (c.category as ColumnKey) ?? 'activities'
+          if (grouped[col]) grouped[col].push(mapApiToLocal(c))
+        }
+        setColumns(grouped)
+      })
+      .finally(() => { /* no-op */ })
+    return () => { mounted = false }
+  }, [])
+
   function handleOpenAdd(column: ColumnKey) {
     setActiveColumn(column)
     setForm(createEmptyFormState())
     openAdd()
   }
 
-  function handleSubmitNewCard() {
+  async function handleSubmitNewCard() {
     if (!activeColumn) return
-    const id = typeof window !== 'undefined' && window.crypto && 'randomUUID' in window.crypto
-      ? window.crypto.randomUUID()
-      : `${Date.now()}-${Math.random()}`
-    const newCard: BacklogCard = {
-      id,
+    const payload = {
+      category: categoryFromColumn(activeColumn),
       title: form.title.trim(),
       location: form.location.trim(),
-      distanceFromHotelKm: null,
       cost: form.cost === '' ? null : Number(form.cost),
       rating: form.rating === '' ? null : Number(form.rating),
-      desireToGo: form.desireToGo === '' ? null : Number(form.desireToGo),
-      requiresReservation: form.requiresReservation,
+      desire_to_go: form.desireToGo === '' ? null : Number(form.desireToGo),
+      requires_reservation: form.requiresReservation,
       description: form.description.trim(),
       reserved: false,
-      reservationDate: null,
-      lockedIn: false,
-    }
+      reservation_date: null,
+      locked_in: false,
+    } as const
+    const created = await createBacklogCard(payload as unknown as ApiBacklogCard)
+    const local = mapApiToLocal(created)
     setColumns(prev => ({
       ...prev,
-      [activeColumn]: [...prev[activeColumn], newCard],
+      [activeColumn]: [...prev[activeColumn], local],
     }))
     closeAdd()
   }
@@ -103,12 +141,18 @@ function BacklogBoard() {
 
   function handleDeleteViewingCard() {
     if (!viewingCard) return
-    setColumns(prev => ({
-      ...prev,
-      [viewingCard.column]: prev[viewingCard.column].filter(c => c.id !== viewingCard.card.id),
-    }))
-    closeView()
-    setViewingCard(null)
+    const apiId = Number(viewingCard.card.id)
+    deleteBacklogCard(apiId)
+      .then(() => {
+        setColumns(prev => ({
+          ...prev,
+          [viewingCard.column]: prev[viewingCard.column].filter(c => c.id !== viewingCard.card.id),
+        }))
+      })
+      .finally(() => {
+        closeView()
+        setViewingCard(null)
+      })
   }
 
   function Column({ column, title }: { column: ColumnKey; title: string }) {
@@ -232,7 +276,7 @@ function BacklogBoard() {
           <Textarea label="Description" placeholder="Add details" minRows={3} value={form.description} onChange={e => { const v = e.currentTarget.value; setForm(f => ({ ...f, description: v })) }} />
           <Group justify="flex-end">
             <Button variant="subtle" onClick={closeAdd}>Cancel</Button>
-            <Button onClick={handleSubmitNewCard} disabled={!form.title.trim()}>Add card</Button>
+            <Button onClick={handleSubmitNewCard} disabled={!form.title.trim()}>Add Event</Button>
           </Group>
         </Stack>
       </Modal>

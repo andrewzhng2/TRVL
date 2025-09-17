@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+
+# Env
+.env
+.env.*
+
+# Mac
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+
