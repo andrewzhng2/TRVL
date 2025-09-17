@@ -1,4 +1,4 @@
-import { Center, Paper, Stack, Text, Title } from '@mantine/core'
+import { Button, Center, Paper, Stack, Text, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 import { loginWithGoogle, type SessionRead } from '../../api/client'
 
@@ -21,6 +21,31 @@ function LoginPage() {
   const buttonRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
+    // Handle redirect-based flow (implicit OIDC) if present
+    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+    const params = new URLSearchParams(hash)
+    const redirectIdToken = params.get('id_token')
+    if (redirectIdToken) {
+      ;(async () => {
+        try {
+          const session: SessionRead = await loginWithGoogle(redirectIdToken)
+          localStorage.setItem('trvl_session', JSON.stringify(session))
+          // Clean the hash from URL
+          history.replaceState(null, '', window.location.pathname + window.location.search)
+          window.location.replace('/trips')
+        } catch (e) {
+          setError((e as Error).message || 'Login failed')
+        }
+      })()
+      return
+    }
+    // Debug info to verify env and origin
+    const origin = window.location.origin
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+    const shortId = clientId ? clientId.slice(0, 8) : '(missing)'
+    console.log(`[AuthDebug] origin=${origin} VITE_GOOGLE_CLIENT_ID[0..8]=${shortId}`)
+    console.assert(!!clientId, 'VITE_GOOGLE_CLIENT_ID is missing. Put it in apps/web/.env.local (or apps/web/.env) and restart Vite.')
+
     // Load Google Identity Services script if not present
     if (!window.google) {
       const script = document.createElement('script')
@@ -72,7 +97,7 @@ function LoginPage() {
       <Paper withBorder p="lg" radius="md" w={380}>
         <Stack>
           <Title order={3}>Login</Title>
-          <Text c="dimmed">Continue with Google. No passwords required.</Text>
+          <Text c="dimmed">Continue with Google.</Text>
           <div ref={buttonRef} />
           {error && <Text c="red">{error}</Text>}
         </Stack>
