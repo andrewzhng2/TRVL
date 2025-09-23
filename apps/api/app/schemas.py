@@ -37,6 +37,9 @@ class BacklogCardUpdate(BaseModel):
 
 class BacklogCardRead(BacklogCardBase):
   id: int
+  created_by: Optional[int] = None
+  created_at: Optional[datetime] = None
+  creator: Optional["UserRead"] = None
 
   class Config:
     from_attributes = True

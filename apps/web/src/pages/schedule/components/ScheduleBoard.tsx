@@ -162,8 +162,9 @@ function WeekHeader({
   const getWeekData = () => {
     if (!tripStartDate) return []
     
-    // Start from the trip's start date
-    const tripStart = new Date(tripStartDate)
+    // Start from the trip's start date - ensure we parse it correctly
+    const tripStart = new Date(tripStartDate + 'T00:00:00') // Force local time to avoid UTC issues
+    const tripEnd = tripEndDate ? new Date(tripEndDate + 'T00:00:00') : null
     
     // Apply the week offset (5-day intervals) - start exactly on trip start date
     const startOfWeek = new Date(tripStart)
@@ -171,7 +172,6 @@ function WeekHeader({
     
     // Get 5 days starting from the current week start, but only within trip dates
     const weekData = []
-    const tripEnd = tripEndDate ? new Date(tripEndDate) : null
     
     for (let i = 0; i < 5; i++) {
       const date = new Date(startOfWeek)
@@ -256,8 +256,9 @@ function WeekBody({
   const getWeekData = () => {
     if (!tripStartDate) return []
     
-    // Start from the trip's start date
-    const tripStart = new Date(tripStartDate)
+    // Start from the trip's start date - ensure we parse it correctly
+    const tripStart = new Date(tripStartDate + 'T00:00:00') // Force local time to avoid UTC issues
+    const tripEnd = tripEndDate ? new Date(tripEndDate + 'T00:00:00') : null
     
     // Apply the week offset (5-day intervals) - start exactly on trip start date
     const startOfWeek = new Date(tripStart)
@@ -265,7 +266,6 @@ function WeekBody({
     
     // Get 5 days starting from the current week start, but only within trip dates
     const weekData = []
-    const tripEnd = tripEndDate ? new Date(tripEndDate) : null
     
     for (let i = 0; i < 5; i++) {
       const date = new Date(startOfWeek)

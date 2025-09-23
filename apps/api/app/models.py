@@ -21,6 +21,10 @@ class BacklogCard(Base):
     reserved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     reservation_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
     locked_in: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    creator: Mapped["User | None"] = relationship("User", foreign_keys=[created_by])
 
 
 class User(Base):

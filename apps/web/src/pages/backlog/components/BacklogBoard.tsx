@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Checkbox, Group, Modal, NumberInput, Paper, Rating, ScrollArea, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createBacklogCard, listBacklogCards, deleteBacklogCard, updateBacklogCard, type BacklogCard as ApiBacklogCard } from '../../../api/client'
+import { createBacklogCard, listBacklogCards, deleteBacklogCard, updateBacklogCard, type BacklogCard as ApiBacklogCard, type SessionRead } from '../../../api/client'
 
 type ColumnKey = 'hotels' | 'activities' | 'food' | 'clubs'
 
@@ -18,6 +18,9 @@ type BacklogCard = {
   reserved: boolean
   reservationDate: string | null
   lockedIn: boolean
+  createdBy: number | null
+  createdAt: string | null
+  creator: { id: number; email: string; name: string; picture: string } | null
 }
 
 type AddCardFormState = {
@@ -42,7 +45,7 @@ function createEmptyFormState(): AddCardFormState {
   }
 }
 
-function BacklogBoard({ tripId }: { tripId?: number }) {
+function BacklogBoard({ tripId: _ }: { tripId?: number }) {
   const [columns, setColumns] = useState<Record<ColumnKey, BacklogCard[]>>({
     hotels: [],
     activities: [],
@@ -52,11 +55,16 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
 
   const [addOpen, { open: openAdd, close: closeAdd }] = useDisclosure(false)
   const [viewOpen, { open: openView, close: closeView }] = useDisclosure(false)
+  const [editOpen, { open: openEdit, close: closeEdit }] = useDisclosure(false)
   const [activeColumn, setActiveColumn] = useState<ColumnKey | null>(null)
   const [form, setForm] = useState<AddCardFormState>(createEmptyFormState())
+  const [editForm, setEditForm] = useState<AddCardFormState>(createEmptyFormState())
   const [viewingCard, setViewingCard] = useState<{ column: ColumnKey; card: BacklogCard } | null>(null)
   const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [editHoverRating, setEditHoverRating] = useState<number | null>(null)
+  const [currentUser, setCurrentUser] = useState<SessionRead | null>(null)
   const ratingRef = useRef<HTMLDivElement | null>(null)
+  const editRatingRef = useRef<HTMLDivElement | null>(null)
   
 
   const gridHeight = useMemo(() => 'calc(100dvh - 180px)', [])
@@ -79,12 +87,29 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
       reserved: card.reserved ?? false,
       reservationDate: card.reservation_date ?? null,
       lockedIn: card.locked_in ?? false,
+      createdBy: card.created_by ?? null,
+      createdAt: card.created_at ?? null,
+      creator: card.creator ?? null,
     }
   }
 
   function categoryFromColumn(column: ColumnKey): ApiBacklogCard['category'] {
     return column
   }
+
+  useEffect(() => {
+    // Load current user session
+    const raw = localStorage.getItem('trvl_session')
+    if (raw) {
+      try {
+        const session = JSON.parse(raw) as SessionRead
+        setCurrentUser(session)
+      } catch (error) {
+        console.error('Error parsing user session:', error)
+        setCurrentUser(null)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -102,7 +127,7 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
       })
       .finally(() => { /* no-op */ })
     return () => { mounted = false }
-  }, [])
+  }, [currentUser]) // Load cards when user session changes
 
   function handleOpenAdd(column: ColumnKey) {
     setActiveColumn(column)
@@ -137,6 +162,41 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
   function handleOpenView(column: ColumnKey, card: BacklogCard) {
     setViewingCard({ column, card })
     openView()
+  }
+
+  function handleOpenEdit(card: BacklogCard) {
+    setEditForm({
+      title: card.title,
+      location: card.location,
+      cost: card.cost ?? '',
+      rating: card.rating ?? '',
+      desireToGo: card.desireToGo ?? '',
+      requiresReservation: card.requiresReservation,
+      description: card.description,
+    })
+    openEdit()
+  }
+
+  async function handleUpdateCard() {
+    if (!viewingCard) return
+    const payload = {
+      category: categoryFromColumn(viewingCard.column),
+      title: editForm.title.trim(),
+      location: editForm.location.trim(),
+      cost: editForm.cost === '' ? null : Number(editForm.cost),
+      rating: editForm.rating === '' ? null : Number(editForm.rating),
+      desire_to_go: editForm.desireToGo === '' ? null : Number(editForm.desireToGo),
+      requires_reservation: editForm.requiresReservation,
+      description: editForm.description.trim(),
+    } as const
+    const updated = await updateBacklogCard(Number(viewingCard.card.id), payload as unknown as ApiBacklogCard)
+    const local = mapApiToLocal(updated)
+    setColumns(prev => ({
+      ...prev,
+      [viewingCard.column]: prev[viewingCard.column].map(c => c.id === viewingCard.card.id ? local : c),
+    }))
+    setViewingCard(prev => prev ? { ...prev, card: local } : null)
+    closeEdit()
   }
 
   function handleDeleteViewingCard() {
@@ -189,6 +249,21 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
                         </Badge>
                       )}
                     </Group>
+                    {card.creator && (
+                      <Group gap={8} align="center">
+                        <img 
+                          src={card.creator.picture} 
+                          alt={card.creator.name}
+                          style={{ 
+                            width: 20, 
+                            height: 20, 
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Text size="xs" c="dimmed">Created by {card.creator.name}</Text>
+                      </Group>
+                    )}
                   </Stack>
                   <Group justify="flex-end">
                     <Button
@@ -377,13 +452,88 @@ function BacklogBoard({ tripId }: { tripId?: number }) {
                     </Badge>
                   )}
                 </Group>
+                {viewingCard.card.creator && (
+                  <Group gap={8} align="center">
+                    <img 
+                      src={viewingCard.card.creator.picture} 
+                      alt={viewingCard.card.creator.name}
+                      style={{ 
+                        width: 24, 
+                        height: 24, 
+                        borderRadius: '50%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                    <Text size="sm" c="dimmed">Created by {viewingCard.card.creator.name}</Text>
+                  </Group>
+                )}
               </Stack>
             )}
             <Group justify="flex-end">
+              {currentUser && (
+                <Button variant="outline" onClick={() => handleOpenEdit(viewingCard.card)}>
+                  Edit
+                </Button>
+              )}
               <Button color="red" onClick={handleDeleteViewingCard}>Delete</Button>
             </Group>
           </Stack>
         )}
+      </Modal>
+
+      <Modal opened={editOpen} onClose={closeEdit} title="Edit Card" size="lg" centered>
+        <Stack gap="sm">
+          <TextInput label="Title" placeholder="e.g., Burj Khalifa" value={editForm.title} onChange={e => { const v = e.currentTarget.value; setEditForm(f => ({ ...f, title: v })) }} />
+          <TextInput label="Location" placeholder="e.g., Downtown Dubai" value={editForm.location} onChange={e => { const v = e.currentTarget.value; setEditForm(f => ({ ...f, location: v })) }} />
+          <Group grow>
+            <NumberInput label="Cost" placeholder="e.g., 120" value={editForm.cost} onChange={v => setEditForm(f => ({ ...f, cost: typeof v === 'number' ? v : '' }))} min={0} step={1} />
+          </Group>
+          <Stack gap="xs">
+            <Group align="center" gap="sm">
+              <Text w={90}>Desire</Text>
+              <Rating
+                value={typeof editForm.desireToGo === 'number' ? editForm.desireToGo : undefined}
+                onChange={(val: number) => setEditForm(f => ({ ...f, desireToGo: val }))}
+                count={10}
+                fractions={2}
+                emptySymbol="♡"
+                fullSymbol="♥"
+              />
+            </Group>
+            <Group align="center" gap="sm">
+              <Text w={90}>Rating</Text>
+              <div
+                ref={editRatingRef}
+                onMouseMove={e => {
+                  const el = editRatingRef.current
+                  if (!el) return
+                  const rect = el.getBoundingClientRect()
+                  const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width)
+                  const proportion = rect.width > 0 ? x / rect.width : 0
+                  const raw = proportion * 5
+                  const stepped = Math.round(raw * 10) / 10
+                  setEditHoverRating(Number(stepped.toFixed(1)))
+                }}
+                onMouseLeave={() => setEditHoverRating(null)}
+                style={{ display: 'inline-flex' }}
+              >
+                <Rating
+                  value={typeof editForm.rating === 'number' ? editForm.rating : undefined}
+                  onChange={(val: number) => setEditForm(f => ({ ...f, rating: val }))}
+                  count={5}
+                  fractions={10}
+                />
+              </div>
+              <Text size="sm" c="dimmed">{(editHoverRating ?? (typeof editForm.rating === 'number' ? editForm.rating : null))?.toFixed?.(1) ?? '—'}</Text>
+            </Group>
+          </Stack>
+          <Checkbox label="Requires reservation" checked={editForm.requiresReservation} onChange={e => { const checked = e.currentTarget.checked; setEditForm(f => ({ ...f, requiresReservation: checked })) }} />
+          <Textarea label="Description" placeholder="Add details" minRows={3} value={editForm.description} onChange={e => { const v = e.currentTarget.value; setEditForm(f => ({ ...f, description: v })) }} />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={closeEdit}>Cancel</Button>
+            <Button onClick={handleUpdateCard} disabled={!editForm.title.trim()}>Update Card</Button>
+          </Group>
+        </Stack>
       </Modal>
     </>
   )

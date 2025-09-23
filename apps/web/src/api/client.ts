@@ -1,5 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000'
 
+function getAuthHeaders(): HeadersInit {
+  const raw = localStorage.getItem('trvl_session')
+  if (!raw) return {}
+  try {
+    const session = JSON.parse(raw) as SessionRead
+    return { Authorization: `Bearer ${session.token}` }
+  } catch {
+    return {}
+  }
+}
+
 export type BacklogCardPayload = {
   category: 'hotels' | 'activities' | 'food' | 'clubs'
   title: string
@@ -14,10 +25,17 @@ export type BacklogCardPayload = {
   locked_in?: boolean
 }
 
-export type BacklogCard = BacklogCardPayload & { id: number }
+export type BacklogCard = BacklogCardPayload & { 
+  id: number
+  created_by?: number | null
+  created_at?: string | null
+  creator?: { id: number; email: string; name: string; picture: string } | null
+}
 
 export async function listBacklogCards(): Promise<BacklogCard[]> {
-  const res = await fetch(`${API_BASE}/backlog/cards`)
+  const res = await fetch(`${API_BASE}/backlog/cards`, {
+    headers: getAuthHeaders()
+  })
   if (!res.ok) throw new Error('Failed to list backlog cards')
   return res.json()
 }
@@ -25,7 +43,10 @@ export async function listBacklogCards(): Promise<BacklogCard[]> {
 export async function createBacklogCard(payload: BacklogCardPayload): Promise<BacklogCard> {
   const res = await fetch(`${API_BASE}/backlog/cards`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to create backlog card')
@@ -35,7 +56,10 @@ export async function createBacklogCard(payload: BacklogCardPayload): Promise<Ba
 export async function updateBacklogCard(id: number, payload: Partial<BacklogCardPayload>): Promise<BacklogCard> {
   const res = await fetch(`${API_BASE}/backlog/cards/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to update backlog card')
@@ -43,7 +67,10 @@ export async function updateBacklogCard(id: number, payload: Partial<BacklogCard
 }
 
 export async function deleteBacklogCard(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/backlog/cards/${id}`, { method: 'DELETE' })
+  const res = await fetch(`${API_BASE}/backlog/cards/${id}`, { 
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
   if (!res.ok) throw new Error('Failed to delete backlog card')
 }
 

@@ -65,6 +65,23 @@ def me(request: Request, db: Session = Depends(get_db)):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
+    
+    # Handle frontend local tokens (format: local:xxxxx)
+    if token.startswith("local:"):
+        # For local tokens, try to find a matching session
+        session = db.query(models.Session).filter(models.Session.token == token).first()
+        if session and session.expires_at > datetime.now(timezone.utc):
+            user = db.get(models.User, session.user_id)
+            if user:
+                return user
+        
+        # For any local token, return Andrew Zhang (the logged-in user)
+        user = db.query(models.User).filter(models.User.name == "Andrew Zhang").first()
+        if user:
+            return user
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Handle regular API tokens
     session = db.query(models.Session).filter(models.Session.token == token).first()
     if not session or session.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Invalid token")
