@@ -17,3 +17,7 @@ dependencies = [
   "alembic>=1.13",
   "requests>=2.32",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]

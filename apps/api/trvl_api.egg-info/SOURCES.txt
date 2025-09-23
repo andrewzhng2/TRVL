@@ -4,6 +4,10 @@ app/__init__.py
 app/db.py
 app/main.py
 app/models.py
+app/schemas.py
+app/routers/auth.py
+app/routers/backlog.py
+app/routers/trips.py
 trvl_api.egg-info/PKG-INFO
 trvl_api.egg-info/SOURCES.txt
 trvl_api.egg-info/dependency_links.txt

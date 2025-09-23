@@ -1,9 +1,7 @@
-import { Box, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core'
-import { useEffect, useMemo, useState } from 'react'
-import { listBacklogCards, type BacklogCard as ApiBacklogCard } from '../../../api/client'
-
-const allDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
-const visibleDays = allDays.slice(0, 5)
+import { Box, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title, ActionIcon } from '@mantine/core'
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { listBacklogCards, type BacklogCard as ApiBacklogCard, listTrips, type Trip } from '../../../api/client'
 
 type Category = 'hotels' | 'activities' | 'food' | 'clubs'
 
@@ -12,6 +10,7 @@ type EventLite = {
   title: string
   desire: number | null
   category: Category
+  locked_in: boolean
 }
 
 type DnDPayload =
@@ -20,8 +19,9 @@ type DnDPayload =
 
 type ScheduledEvent = EventLite & { dayIndex: number; hour: number }
 
-const START_HOUR_24 = 8 // 8 AM
-const END_HOUR_24 = 23 // 11 PM (exclusive bound for label helper)
+const START_HOUR_24 = 0 // 12 AM
+const END_HOUR_24 = 24 // 12 PM (exclusive bound for label helper)
+const SCROLL_START_HOUR_24 = 8 // 8 AM - where scroll starts
 
 function formatHourLabel(hour24: number): string {
   const date = new Date()
@@ -132,7 +132,7 @@ function ScheduleEventCard({
       }}
       style={{ height: '100%' }}
     >
-      <Paper withBorder p="xs" radius="sm" style={{ height: '100%', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'grab' }}>
+      <Paper withBorder p="xs" radius={0} style={{ height: '100%', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'grab' }}>
         <Group justify="space-between" align="center" style={{ width: '100%' }}>
           <Text size="sm" fw={600} style={{ wordBreak: 'break-word' }}>{event.title}</Text>
           <Text size="sm" c="dimmed">Desire: {typeof event.desire === 'number' ? event.desire.toFixed(1) : '—'}</Text>
@@ -142,22 +142,95 @@ function ScheduleEventCard({
   )
 }
 
-function WeekHeader() {
+function WeekHeader({ 
+  currentWeekOffset, 
+  onPreviousWeek, 
+  onNextWeek,
+  tripStartDate,
+  tripEndDate,
+  canNavigatePrevious,
+  canNavigateNext
+}: { 
+  currentWeekOffset: number
+  onPreviousWeek: () => void
+  onNextWeek: () => void
+  tripStartDate?: string | null
+  tripEndDate?: string | null
+  canNavigatePrevious: boolean
+  canNavigateNext: boolean
+}) {
+  const getWeekData = () => {
+    if (!tripStartDate) return []
+    
+    // Start from the trip's start date
+    const tripStart = new Date(tripStartDate)
+    
+    // Apply the week offset (5-day intervals) - start exactly on trip start date
+    const startOfWeek = new Date(tripStart)
+    startOfWeek.setDate(tripStart.getDate() + (currentWeekOffset * 5))
+    
+    // Get 5 days starting from the current week start, but only within trip dates
+    const weekData = []
+    const tripEnd = tripEndDate ? new Date(tripEndDate) : null
+    
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(startOfWeek)
+      date.setDate(startOfWeek.getDate() + i)
+      
+      // Only include dates within the trip range (inclusive)
+      if (tripEnd && date > tripEnd) break
+      if (date < tripStart) continue
+      
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      const dayName = dayNames[date.getDay()]
+      const dayNumber = date.getDate()
+      
+      weekData.push({ dayName, dayNumber, date })
+    }
+    
+    return weekData
+  }
+
+  const weekData = getWeekData()
+
   return (
     <Box
       style={{
         display: 'grid',
-        gridTemplateColumns: `${TIME_COL_WIDTH_PX}px repeat(5, 1fr)`,
-        gap: 8,
+        gridTemplateColumns: `${TIME_COL_WIDTH_PX}px 40px repeat(5, 1fr) 40px`,
+        gap: 0,
         alignItems: 'center',
       }}
     >
       <Box />
-      {visibleDays.map(d => (
-        <Box key={d}>
-          <Title order={4}>{d}</Title>
+      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ActionIcon 
+          variant="subtle" 
+          size="sm" 
+          onClick={onPreviousWeek}
+          disabled={!canNavigatePrevious}
+          style={{ opacity: canNavigatePrevious ? 1 : 0.3 }}
+        >
+          <IconChevronLeft size={16} />
+        </ActionIcon>
+      </Box>
+      {weekData.map((day) => (
+        <Box key={`${day.dayName}-${day.dayNumber}`} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <Title order={4}>{day.dayName}</Title>
+          <Text size="sm" c="dimmed">{day.dayNumber}</Text>
         </Box>
       ))}
+      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ActionIcon 
+          variant="subtle" 
+          size="sm" 
+          onClick={onNextWeek}
+          disabled={!canNavigateNext}
+          style={{ opacity: canNavigateNext ? 1 : 0.3 }}
+        >
+          <IconChevronRight size={16} />
+        </ActionIcon>
+      </Box>
     </Box>
   )
 }
@@ -166,24 +239,72 @@ function WeekBody({
   getEvent,
   onDropIntoSlot,
   onScheduledDragStart,
+  currentWeekOffset,
+  tripStartDate,
+  tripEndDate,
 }: {
   getEvent: (dayIndex: number, hour: number) => ScheduledEvent | null
   onDropIntoSlot: (dayIndex: number, hour: number, payload: DnDPayload) => void
   onScheduledDragStart: () => void
-  
+  currentWeekOffset: number
+  tripStartDate?: string | null
+  tripEndDate?: string | null
 }) {
   const hours = useMemo(() => Array.from({ length: END_HOUR_24 - START_HOUR_24 }, (_, i) => START_HOUR_24 + i), [])
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  const getWeekData = () => {
+    if (!tripStartDate) return []
+    
+    // Start from the trip's start date
+    const tripStart = new Date(tripStartDate)
+    
+    // Apply the week offset (5-day intervals) - start exactly on trip start date
+    const startOfWeek = new Date(tripStart)
+    startOfWeek.setDate(tripStart.getDate() + (currentWeekOffset * 5))
+    
+    // Get 5 days starting from the current week start, but only within trip dates
+    const weekData = []
+    const tripEnd = tripEndDate ? new Date(tripEndDate) : null
+    
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(startOfWeek)
+      date.setDate(startOfWeek.getDate() + i)
+      
+      // Only include dates within the trip range (inclusive)
+      if (tripEnd && date > tripEnd) break
+      if (date < tripStart) continue
+      
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      const dayName = dayNames[date.getDay()]
+      const dayNumber = date.getDate()
+      
+      weekData.push({ dayName, dayNumber, date })
+    }
+    
+    return weekData
+  }
+
+  const weekData = getWeekData()
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollToHour = SCROLL_START_HOUR_24 - START_HOUR_24
+      const scrollTop = scrollToHour * SLOT_HEIGHT_PX
+      scrollAreaRef.current.scrollTop = scrollTop
+    }
+  }, [])
 
   return (
-    <ScrollArea.Autosize type="auto" mah={`calc(100dvh - 220px)`} offsetScrollbars>
-      <Stack gap={8}>
+    <ScrollArea.Autosize ref={scrollAreaRef} type="auto" mah={`calc(100dvh - 220px)`} offsetScrollbars>
+      <Stack gap={0}>
         {hours.map(hour => (
           <Box
             key={hour}
             style={{
               display: 'grid',
-              gridTemplateColumns: `${TIME_COL_WIDTH_PX}px repeat(5, 1fr)`,
-              gap: 8,
+              gridTemplateColumns: `${TIME_COL_WIDTH_PX}px 40px repeat(5, 1fr) 40px`,
+              gap: 0,
               alignItems: 'stretch',
             }}
           >
@@ -195,12 +316,18 @@ function WeekBody({
                 alignItems: 'center',
                 justifyContent: 'flex-start',
                 paddingLeft: 4,
+                borderBottom: '1px solid transparent',
+                position: 'relative',
+                backgroundColor: 'white',
+                zIndex: 1,
               }}
             >
-              <Text size="xs" c="dimmed">{formatHourLabel(hour)}</Text>
+              <Text size="xs" c="dimmed" style={{ position: 'absolute', top: '-6px', left: '4px', backgroundColor: 'white', padding: '0 2px' }}>{formatHourLabel(hour)}</Text>
             </Box>
+            {/* Left arrow cell */}
+            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent' }} />
             {/* Day cells */}
-            {visibleDays.map((_, dayIndex) => {
+            {weekData.map((_, dayIndex) => {
               const scheduled = getEvent(dayIndex, hour)
               return (
                 <Box
@@ -221,6 +348,8 @@ function WeekBody({
                   }}
                   style={{
                     height: SLOT_HEIGHT_PX,
+                    borderBottom: '1px solid var(--mantine-color-gray-2)',
+                    borderRight: '1px solid var(--mantine-color-gray-2)',
                   }}
                 >
                   {scheduled ? (
@@ -229,19 +358,19 @@ function WeekBody({
                     <Box
                       style={{
                         height: '100%',
-                        border: '1px dashed var(--mantine-color-gray-5)',
-                        borderRadius: 8,
+                        border: '1px solid var(--mantine-color-gray-2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <Text size="xs" c="dimmed">Drop here</Text>
                     </Box>
                   )}
                 </Box>
               )
             })}
+            {/* Right arrow cell */}
+            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent' }} />
           </Box>
         ))}
       </Stack>
@@ -249,13 +378,29 @@ function WeekBody({
   )
 }
 
-function ScheduleBoard() {
+function ScheduleBoard({ tripId }: { tripId?: number }) {
   const [category, setCategory] = useState<Category>('activities')
   const [events, setEvents] = useState<EventLite[]>([])
   const [slots, setSlots] = useState<Record<string, ScheduledEvent>>({})
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const [trip, setTrip] = useState<Trip | null>(null)
   // simple flag that a drag started from a scheduled card (no removing outside)
 
   const gridHeight = useMemo(() => 'calc(100dvh - 180px)', [])
+
+  // Load trip data
+  useEffect(() => {
+    if (!tripId) return
+    let mounted = true
+    listTrips()
+      .then(trips => {
+        if (!mounted) return
+        const foundTrip = trips.find(t => t.id === tripId)
+        setTrip(foundTrip || null)
+      })
+      .catch(() => { /* no-op */ })
+    return () => { mounted = false }
+  }, [tripId])
 
   useEffect(() => {
     let mounted = true
@@ -267,6 +412,7 @@ function ScheduleBoard() {
           title: c.title,
           desire: c.desire_to_go ?? null,
           category: (c.category as Category) ?? 'activities',
+          locked_in: c.locked_in ?? false,
         }))
         setEvents(mapped)
       })
@@ -274,7 +420,38 @@ function ScheduleBoard() {
     return () => { mounted = false }
   }, [])
 
-  const visibleEvents = useMemo(() => events.filter(ev => ev.category === category), [events, category])
+  const visibleEvents = useMemo(() => events.filter(ev => ev.category === category && ev.locked_in), [events, category])
+
+  // Calculate navigation limits based on trip dates
+  const navigationLimits = useMemo(() => {
+    if (!trip?.start_date || !trip?.end_date) {
+      return { canNavigatePrevious: true, canNavigateNext: true }
+    }
+
+    const tripStart = new Date(trip.start_date)
+    const tripEnd = new Date(trip.end_date)
+    
+    // Calculate the earliest possible start date (trip start)
+    const earliestStart = tripStart
+    
+    // Calculate the latest possible start date (trip end - 4 days to show 5 days, but ensure we don't go before trip start)
+    const latestStart = new Date(tripEnd)
+    latestStart.setDate(tripEnd.getDate() - 4)
+    
+    // Ensure latest start is not before trip start
+    if (latestStart < tripStart) {
+      latestStart.setTime(tripStart.getTime())
+    }
+    
+    // Calculate current start date based on offset
+    const currentStart = new Date(tripStart)
+    currentStart.setDate(tripStart.getDate() + (currentWeekOffset * 5))
+    
+    const canNavigatePrevious = currentStart > earliestStart
+    const canNavigateNext = currentStart < latestStart
+    
+    return { canNavigatePrevious, canNavigateNext }
+  }, [trip?.start_date, trip?.end_date, currentWeekOffset])
 
   function getKey(dayIndex: number, hour: number): string {
     return `${dayIndex}-${hour}`
@@ -306,6 +483,18 @@ function ScheduleBoard() {
     // no-op now; we keep this to keep the API stable
   }
 
+  function handlePreviousWeek() {
+    if (navigationLimits.canNavigatePrevious) {
+      setCurrentWeekOffset(prev => prev - 1)
+    }
+  }
+
+  function handleNextWeek() {
+    if (navigationLimits.canNavigateNext) {
+      setCurrentWeekOffset(prev => prev + 1)
+    }
+  }
+
   return (
     <Box h={gridHeight}>
       <SimpleGrid cols={7} spacing="md" h="100%">
@@ -316,11 +505,22 @@ function ScheduleBoard() {
         />
         <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column' }}>
           <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
-            <WeekHeader />
+            <WeekHeader 
+              currentWeekOffset={currentWeekOffset}
+              onPreviousWeek={handlePreviousWeek}
+              onNextWeek={handleNextWeek}
+              tripStartDate={trip?.start_date}
+              tripEndDate={trip?.end_date}
+              canNavigatePrevious={navigationLimits.canNavigatePrevious}
+              canNavigateNext={navigationLimits.canNavigateNext}
+            />
             <WeekBody
               getEvent={getEvent}
               onDropIntoSlot={handleDropIntoSlot}
               onScheduledDragStart={handleScheduledDragStart}
+              currentWeekOffset={currentWeekOffset}
+              tripStartDate={trip?.start_date}
+              tripEndDate={trip?.end_date}
             />
           </Stack>
         </Paper>
@@ -330,5 +530,3 @@ function ScheduleBoard() {
 }
 
 export default ScheduleBoard
-
-

@@ -2,7 +2,7 @@ import BacklogBoard from './components/BacklogBoard'
 
 function Backlog() {
   return (
-    <BacklogBoard />
+    <BacklogBoard tripId={undefined} />
   )
 }
 

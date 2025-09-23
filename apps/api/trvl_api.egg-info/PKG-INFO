@@ -9,3 +9,4 @@ Requires-Dist: python-dotenv>=1.0
 Requires-Dist: psycopg[binary]>=3.2
 Requires-Dist: SQLAlchemy>=2.0
 Requires-Dist: alembic>=1.13
+Requires-Dist: requests>=2.32

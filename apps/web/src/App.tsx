@@ -1,12 +1,16 @@
-import { AppShell, Avatar, Group, Image, NavLink, Stack, Text, Title } from '@mantine/core'
+import { AppShell, Avatar, Group, Image, Menu, Stack, Text, Title } from '@mantine/core'
 import './App.css'
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import Backlog from './pages/backlog'
-import Schedule from './pages/schedule'
 import Login from './pages/login'
-import { fetchMe, type SessionRead } from './api/client'
+import { fetchMe, logout as apiLogout, type SessionRead } from './api/client'
 import Trips from './pages/trips'
+import Navigation from './components/Navigation'
+import TripMain from './pages/trip/TripMain'
+import TripBacklog from './pages/trip/TripBacklog'
+import TripSchedule from './pages/trip/TripSchedule'
+import TripTravel from './pages/trip/TripTravel'
+import TripPacking from './pages/trip/TripPacking'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2)
@@ -40,42 +44,38 @@ function useSession() {
 }
 
 function RequireAuth({ children }: { children: JSX.Element }) {
-  const { session } = useSession()
-  if (!session) return <Navigate to="/login" replace />
+  const raw = localStorage.getItem('trvl_session')
+  if (!raw) return <Navigate to="/login" replace />
   return children
 }
 
 function App() {
+  const location = useLocation()
+  const isLogin = location.pathname === '/login'
   return (
     <AppShell
       header={{ height: 60 }}
-      navbar={{ width: 280, breakpoint: 'sm' }}
+      navbar={isLogin ? undefined : { width: 280, breakpoint: 'sm' }}
       padding="md"
     >
       <AppShell.Header withBorder>
         <HeaderContent />
       </AppShell.Header>
-      <AppShell.Navbar p="md" withBorder>
-        <Stack gap="md">
-          <Stack gap="xs">
-            <NavLink label="Trips" defaultOpened fw={700} fz="lg">
-              <NavLink label="Dubai" defaultOpened>
-                <NavLink label="Backlog" component={Link} to="/dubai/backlog" />
-                <NavLink label="Schedule" component={Link} to="/dubai/schedule" />
-                <NavLink label="Travel" />
-                <NavLink label="Packing" />
-              </NavLink>
-            </NavLink>
-          </Stack>
-        </Stack>
-      </AppShell.Navbar>
+      {!isLogin && (
+        <AppShell.Navbar p="md" withBorder>
+          <Navigation />
+        </AppShell.Navbar>
+      )}
       <AppShell.Main>
         <Routes>
           <Route path="/" element={<Navigate to="/trips" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/trips" element={<RequireAuth><Trips /></RequireAuth>} />
-          <Route path="/dubai/backlog" element={<RequireAuth><Backlog /></RequireAuth>} />
-          <Route path="/dubai/schedule" element={<RequireAuth><Schedule /></RequireAuth>} />
+          <Route path="/:tripSlug" element={<RequireAuth><TripMain /></RequireAuth>} />
+          <Route path="/:tripSlug/backlog" element={<RequireAuth><TripBacklog /></RequireAuth>} />
+          <Route path="/:tripSlug/schedule" element={<RequireAuth><TripSchedule /></RequireAuth>} />
+          <Route path="/:tripSlug/travel" element={<RequireAuth><TripTravel /></RequireAuth>} />
+          <Route path="/:tripSlug/packing" element={<RequireAuth><TripPacking /></RequireAuth>} />
         </Routes>
       </AppShell.Main>
     </AppShell>
@@ -85,19 +85,36 @@ function App() {
 export default App
 
 function HeaderContent() {
-  const { session } = useSession()
+  const { session, setSession } = useSession()
+  async function handleLogout() {
+    try {
+      if (session?.token) await apiLogout(session.token)
+    } catch { /* ignore */ }
+    localStorage.removeItem('trvl_session')
+    setSession(null)
+    window.location.replace('/login')
+  }
   return (
     <Group h="100%" px="md" justify="space-between">
-      <Group gap={8}>
-        <Image alt="TRVL logo" src="/vite.svg" w={24} h={24} />
-        <Title order={4}>TRVL</Title>
-      </Group>
+      <Link to="/trips" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Group gap={8}>
+          <Image alt="TRVL logo" src="/vite.svg" w={24} h={24} />
+          <Title order={4}>TRVL</Title>
+        </Group>
+      </Link>
       {session && (
         <Group gap={8}>
           <Text size="sm" fw={600}>{session.user.name}</Text>
-          <Avatar radius="xl" size={28} src={session.user.picture} alt={session.user.name}>
-            {!session.user.picture && getInitials(session.user.name)}
-          </Avatar>
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Avatar radius="xl" size={28} src={session.user.picture} alt={session.user.name} style={{ cursor: 'pointer' }}>
+                {!session.user.picture && getInitials(session.user.name)}
+              </Avatar>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={handleLogout}>Log out</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
       )}
     </Group>

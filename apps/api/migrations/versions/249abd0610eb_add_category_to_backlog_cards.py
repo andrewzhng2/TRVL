@@ -52,9 +52,32 @@ def upgrade() -> None:
         sa.UniqueConstraint('token'),
     )
 
+    # Create trips table
+    op.create_table(
+        'trips',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('name', sa.String(length=200), nullable=False),
+        sa.Column('start_date', sa.String(length=10), nullable=True),
+        sa.Column('end_date', sa.String(length=10), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+    )
+
+    op.create_table(
+        'trip_sections',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('trip_id', sa.Integer(), nullable=False),
+        sa.Column('kind', sa.String(length=30), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table('sessions')
+    op.drop_table('trip_sections')
+    op.drop_table('trips')
     op.drop_table('users')
     op.drop_column('backlog_cards', 'category')

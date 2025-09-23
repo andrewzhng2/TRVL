@@ -35,6 +35,22 @@ def create_card(payload: schemas.BacklogCardCreate, db: Session = Depends(get_db
     return card
 
 
+@router.patch("/cards/{card_id}", response_model=schemas.BacklogCardRead)
+def update_card(card_id: int, payload: schemas.BacklogCardUpdate, db: Session = Depends(get_db)):
+    card = db.get(models.BacklogCard, card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    # Update only the fields that are provided
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(card, field, value)
+    
+    db.commit()
+    db.refresh(card)
+    return card
+
+
 @router.delete("/cards/{card_id}", status_code=204)
 def delete_card(card_id: int, db: Session = Depends(get_db)):
     card = db.get(models.BacklogCard, card_id)

@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Checkbox, Group, Modal, NumberInput, Paper, Rating, ScrollArea, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createBacklogCard, listBacklogCards, deleteBacklogCard, type BacklogCard as ApiBacklogCard } from '../../../api/client'
+import { createBacklogCard, listBacklogCards, deleteBacklogCard, updateBacklogCard, type BacklogCard as ApiBacklogCard } from '../../../api/client'
 
 type ColumnKey = 'hotels' | 'activities' | 'food' | 'clubs'
 
@@ -42,7 +42,7 @@ function createEmptyFormState(): AddCardFormState {
   }
 }
 
-function BacklogBoard() {
+function BacklogBoard({ tripId }: { tripId?: number }) {
   const [columns, setColumns] = useState<Record<ColumnKey, BacklogCard[]>>({
     hotels: [],
     activities: [],
@@ -195,12 +195,32 @@ function BacklogBoard() {
                       size="xs"
                       variant={card.lockedIn ? 'filled' : 'light'}
                       color={card.lockedIn ? 'green' : 'blue'}
-                      onClick={e => {
+                      onClick={async e => {
                         e.stopPropagation()
+                        const newLockedIn = !card.lockedIn
+                        // Optimistically update UI
                         setColumns(prev => ({
                           ...prev,
-                          [column]: prev[column].map(c => c.id === card.id ? { ...c, lockedIn: !c.lockedIn } : c),
+                          [column]: prev[column].map(c => c.id === card.id ? { ...c, lockedIn: newLockedIn } : c),
                         }))
+                        // Update backend
+                        try {
+                          console.log('Updating card', card.id, 'to locked_in:', newLockedIn)
+                          const updatedCard = await updateBacklogCard(Number(card.id), { locked_in: newLockedIn })
+                          console.log('Updated card response:', updatedCard)
+                          // Update with the actual response from the server
+                          setColumns(prev => ({
+                            ...prev,
+                            [column]: prev[column].map(c => c.id === card.id ? mapApiToLocal(updatedCard) : c),
+                          }))
+                        } catch (error) {
+                          // Revert on error
+                          setColumns(prev => ({
+                            ...prev,
+                            [column]: prev[column].map(c => c.id === card.id ? { ...c, lockedIn: !newLockedIn } : c),
+                          }))
+                          console.error('Failed to update lock status:', error)
+                        }
                       }}
                     >
                       {card.lockedIn ? 'LOCKED IN' : 'lock in?'}

@@ -32,6 +32,16 @@ export async function createBacklogCard(payload: BacklogCardPayload): Promise<Ba
   return res.json()
 }
 
+export async function updateBacklogCard(id: number, payload: Partial<BacklogCardPayload>): Promise<BacklogCard> {
+  const res = await fetch(`${API_BASE}/backlog/cards/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to update backlog card')
+  return res.json()
+}
+
 export async function deleteBacklogCard(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/backlog/cards/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Failed to delete backlog card')
@@ -62,6 +72,81 @@ export async function fetchMe(token: string) {
 
 export async function logout(token: string) {
   await fetch(`${API_BASE}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+}
+
+// Trips
+export type TripLeg = { id: number; name: string; start_date?: string | null; end_date?: string | null; order_index: number }
+export type TripLegCreate = { name: string; start_date?: string | null; end_date?: string | null; order_index?: number }
+export type TripLegUpdate = { name?: string; start_date?: string | null; end_date?: string | null; order_index?: number }
+
+export type Trip = { id: number; name: string; start_date?: string | null; end_date?: string | null; legs?: TripLeg[] }
+export type TripCreate = { name: string; start_date?: string | null; end_date?: string | null }
+
+export async function listTrips(): Promise<Trip[]> {
+  const res = await fetch(`${API_BASE}/trips/`)
+  if (!res.ok) throw new Error('Failed to list trips')
+  return res.json()
+}
+
+export async function createTrip(payload: TripCreate): Promise<Trip> {
+  const res = await fetch(`${API_BASE}/trips/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to create trip')
+  return res.json()
+}
+
+export async function updateTrip(id: number, payload: Partial<TripCreate>): Promise<Trip> {
+  const res = await fetch(`${API_BASE}/trips/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to update trip')
+  return res.json()
+}
+
+export async function deleteTrip(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/trips/${id}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('Failed to delete trip')
+}
+
+// Trip Legs
+export async function listTripLegs(tripId: number): Promise<TripLeg[]> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/legs`)
+  if (!res.ok) throw new Error('Failed to list trip legs')
+  return res.json()
+}
+
+export async function createTripLeg(tripId: number, payload: TripLegCreate): Promise<TripLeg> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/legs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to create trip leg')
+  return res.json()
+}
+
+export async function updateTripLeg(tripId: number, legId: number, payload: TripLegUpdate): Promise<TripLeg> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/legs/${legId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to update trip leg')
+  return res.json()
+}
+
+export async function deleteTripLeg(tripId: number, legId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/legs/${legId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('Failed to delete trip leg')
 }
 
 
