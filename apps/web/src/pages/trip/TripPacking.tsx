@@ -120,7 +120,7 @@ function TripPacking() {
   return (
     <Stack gap="md">
       <Group justify="space-between" align="center">
-        <Title order={2}>Packing - {trip.name}</Title>
+        <Title order={2}>Packing Lists - {trip.name}</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={handleAddPerson}>Add person</Button>
       </Group>
 
