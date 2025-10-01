@@ -35,7 +35,7 @@ function TripsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const [trips, setTrips] = useState<Trip[]>([])
-  const [openMapTripId, setOpenMapTripId] = useState<number | null>(null)
+  const [openMapTripIds, setOpenMapTripIds] = useState<Set<number>>(() => new Set())
 
   useEffect(() => {
     let mounted = true
@@ -43,7 +43,7 @@ function TripsPage() {
       .then(ts => {
         if (!mounted) return
         setTrips(ts)
-        if (ts.length > 0) setOpenMapTripId(ts[0].id)
+        if (ts.length > 0) setOpenMapTripIds(new Set([ts[0].id]))
       })
       .catch(() => { /* ignore for now */ })
     return () => { mounted = false }
@@ -122,31 +122,38 @@ function TripsPage() {
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Title order={2}>Trips</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={openAdd}>Add Trip</Button>
+        <Button leftSection={<IconPlus size={16} />} onClick={openAdd} w={160}>Add Trip</Button>
       </Group>
 
       {trips.map(trip => (
-        <Card key={trip.id} withBorder radius="md" p="lg">
-          <Group justify="space-between" align="center">
-            <Stack gap={2}>
-              <Group gap={8}>
-                <Title order={4}>{trip.name || 'Untitled trip'}</Title>
-                <ActionIcon variant="subtle" onClick={() => openEditTrip(trip)} aria-label="Edit Trip">
+        <Card key={trip.id} withBorder radius="md" p="lg" className="trip-card">
+          <div className="trip-card-header">
+            <Group justify="space-between" align="center">
+              <Group gap={28}>
+                <Title order={4} c="white">{trip.name || 'Untitled trip'}</Title>
+                <ActionIcon variant="white" onClick={() => openEditTrip(trip)} aria-label="Edit Trip">
                   <IconPencil size={16} />
                 </ActionIcon>
               </Group>
-              <Group gap={6} align="center">
-                <Text c="dimmed">{trip.start_date ?? 'Start'} → {trip.end_date ?? 'End'}</Text>
+              <div />
+            </Group>
+          </div>
+          <Group justify="space-between" align="center">
+            <Stack gap={2}>
+              <Group gap={12} align="center">
+                <Text c="black">{trip.start_date ?? 'Start'} → {trip.end_date ?? 'End'}</Text>
                 <ActionIcon 
-                  variant="subtle" 
+                  color="blue"
+                  radius="md"
+                  variant={openMapTripIds.has(trip.id) ? 'filled' : 'outline'} 
                   aria-label={`Show map for ${getTripCity(trip)}`}
-                  onClick={() => setOpenMapTripId(id => id === trip.id ? null : trip.id)}
+                  onClick={() => setOpenMapTripIds(prev => { const next = new Set(prev); if (next.has(trip.id)) next.delete(trip.id); else next.add(trip.id); return next; })}
                 >
                   <IconMapPin size={16} />
                 </ActionIcon>
               </Group>
               {trip.legs && trip.legs.length > 0 && (
-                <Text size="sm" c="dimmed">
+                <Text size="sm" c="black">
                   {trip.legs.length} leg{trip.legs.length !== 1 ? 's' : ''}: {trip.legs.map(leg => leg.name).join(', ')}
                 </Text>
               )}
@@ -157,7 +164,7 @@ function TripsPage() {
               <Button component={Link} to={`/${generateTripSlug(trip.name)}/schedule`}>Schedule</Button>
             </Group>
           </Group>
-          {openMapTripId === trip.id && (
+          {openMapTripIds.has(trip.id) && (
             <div style={{ marginTop: 12 }}>
               <TripMap city={getTripCity(trip)} />
             </div>
