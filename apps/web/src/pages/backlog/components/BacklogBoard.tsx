@@ -45,7 +45,7 @@ function createEmptyFormState(): AddCardFormState {
   }
 }
 
-function BacklogBoard({ tripId: _ }: { tripId?: number }) {
+function BacklogBoard() {
   const [columns, setColumns] = useState<Record<ColumnKey, BacklogCard[]>>({
     hotels: [],
     activities: [],
@@ -218,10 +218,10 @@ function BacklogBoard({ tripId: _ }: { tripId?: number }) {
   function Column({ column, title }: { column: ColumnKey; title: string }) {
     const cards = columns[column]
     return (
-      <Paper withBorder p="sm" radius="md" h="100%">
+      <Paper withBorder p="sm" radius="md" h="100%" style={{ backgroundColor: '#1D2F6F' }}>
         <Stack gap="sm" h="100%">
           <Group justify="space-between" align="center">
-            <Title order={4}>{title}</Title>
+            <Title order={4} style={{ color: '#FFFFFF', fontSize: '1.5rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{title}</Title>
             <Button size="xs" onClick={() => handleOpenAdd(column)}>Add</Button>
           </Group>
           <ScrollArea.Autosize mah={COLUMN_STACK_MAX_HEIGHT} type="auto" offsetScrollbars>

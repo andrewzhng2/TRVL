@@ -238,7 +238,7 @@ function PersonColumn({
                     >
                       {person.name || 'Person'}
                     </Text>
-                    <Group gap={4} style={{ position: 'absolute', right: 0, top: 0 }}>
+                    <Group gap={4} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-57%)' }}>
                       <ActionIcon color="white" variant="subtle" onClick={() => setIsEditingName(true)} aria-label="Edit name">
                         <IconPencil size={16} />
                       </ActionIcon>
