@@ -2,3 +2,11 @@
 #root {
   min-height: 100vh;
 }
+
+.brand-logo {
+  font-family: var(--brand-font);
+  color: var(--brand-color);
+  font-weight: 1200;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}

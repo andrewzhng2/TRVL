@@ -1,4 +1,5 @@
 import { NavLink, Stack } from '@mantine/core'
+import { IconBackpack, IconCalendar, IconLayoutGrid, IconList, IconPlane, IconTrain } from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { listTrips, type Trip } from '../api/client'
@@ -48,11 +49,11 @@ function Navigation() {
   return (
     <Stack gap="md">
       <Stack gap="xs">
-        <NavLink label="Trips" defaultOpened fw={700} fz="lg">
+        <NavLink label="Trips" defaultOpened fw={700} fz="lg" leftSection={<IconPlane size={16} style={{ transform: 'translateY(1px)' }} />}>
           {trips.length === 0 ? (
             <NavLink label="No trips yet" disabled />
           ) : (
-            trips.map((trip) => {
+            trips.map((trip, index) => {
               const tripSlug = generateTripSlug(trip.name)
               const isOpen = location.pathname.startsWith(`/${tripSlug}`)
               
@@ -60,7 +61,7 @@ function Navigation() {
                 <NavLink
                   key={trip.id}
                   label={trip.name}
-                  defaultOpened={isOpen}
+                  defaultOpened={isOpen || index === 0}
                   component={Link}
                   to={`/${tripSlug}`}
                 >
@@ -69,30 +70,35 @@ function Navigation() {
                     component={Link} 
                     to={`/${tripSlug}`}
                     active={isTripMain(tripSlug)}
+                    leftSection={<IconLayoutGrid size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                   <NavLink 
                     label="Backlog" 
                     component={Link} 
                     to={`/${tripSlug}/backlog`}
                     active={isTripSection(tripSlug, 'backlog')}
+                    leftSection={<IconList size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                   <NavLink 
                     label="Schedule" 
                     component={Link} 
                     to={`/${tripSlug}/schedule`}
                     active={isTripSection(tripSlug, 'schedule')}
+                    leftSection={<IconCalendar size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                   <NavLink 
                     label="Travel" 
                     component={Link} 
                     to={`/${tripSlug}/travel`}
                     active={isTripSection(tripSlug, 'travel')}
+                    leftSection={<IconTrain size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                   <NavLink 
                     label="Packing" 
                     component={Link} 
                     to={`/${tripSlug}/packing`}
                     active={isTripSection(tripSlug, 'packing')}
+                    leftSection={<IconBackpack size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                 </NavLink>
               )

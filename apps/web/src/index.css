@@ -1,6 +1,8 @@
 /* Minimal reset; Mantine handles theming */
 :root {
   color-scheme: light dark;
+  --brand-font: 'Baloo 2', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --brand-color: #FF7A00; /* fun orange */
 }
 
 html, body, #root {

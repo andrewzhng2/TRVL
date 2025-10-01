@@ -1,13 +1,14 @@
 import { ActionIcon, Button, Card, Group, Modal, Stack, Text, TextInput, Title } from '@mantine/core'
 import '@mantine/core/styles.css';
 import { DateInput } from '@mantine/dates'
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconMapPin, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createTrip, listTrips, updateTrip, deleteTrip, type Trip } from '../../api/client'
 import { generateTripSlug } from '../../utils/tripUtils'
 import TripLegsManager from '../../components/TripLegsManager'
+import TripMap from '../../components/TripMap'
 
 function TripsPage() {
   function coerceDate(v: unknown): Date | null {
@@ -34,11 +35,16 @@ function TripsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const [trips, setTrips] = useState<Trip[]>([])
+  const [openMapTripId, setOpenMapTripId] = useState<number | null>(null)
 
   useEffect(() => {
     let mounted = true
     listTrips()
-      .then(ts => { if (mounted) setTrips(ts) })
+      .then(ts => {
+        if (!mounted) return
+        setTrips(ts)
+        if (ts.length > 0) setOpenMapTripId(ts[0].id)
+      })
       .catch(() => { /* ignore for now */ })
     return () => { mounted = false }
   }, [])
@@ -100,6 +106,18 @@ function TripsPage() {
     }
   }
 
+  function getTripCity(trip: Trip): string {
+    const legCity = trip.legs && trip.legs.length > 0 ? (trip.legs[0]?.name || '').trim() : ''
+    if (legCity) return legCity
+    const name = (trip.name || '').trim()
+    if (!name) return 'Trip'
+    const commaIdx = name.indexOf(',')
+    if (commaIdx > 0) return name.slice(0, commaIdx).trim()
+    const match = name.match(/^[^0-9:\-–—]+/)
+    const candidate = (match ? match[0] : name).trim()
+    return candidate || name
+  }
+
   return (
     <Stack gap="md">
       <Group justify="space-between" align="center">
@@ -117,7 +135,16 @@ function TripsPage() {
                   <IconPencil size={16} />
                 </ActionIcon>
               </Group>
-              <Text c="dimmed">{trip.start_date ?? 'Start'} → {trip.end_date ?? 'End'}</Text>
+              <Group gap={6} align="center">
+                <Text c="dimmed">{trip.start_date ?? 'Start'} → {trip.end_date ?? 'End'}</Text>
+                <ActionIcon 
+                  variant="subtle" 
+                  aria-label={`Show map for ${getTripCity(trip)}`}
+                  onClick={() => setOpenMapTripId(id => id === trip.id ? null : trip.id)}
+                >
+                  <IconMapPin size={16} />
+                </ActionIcon>
+              </Group>
               {trip.legs && trip.legs.length > 0 && (
                 <Text size="sm" c="dimmed">
                   {trip.legs.length} leg{trip.legs.length !== 1 ? 's' : ''}: {trip.legs.map(leg => leg.name).join(', ')}
@@ -130,6 +157,11 @@ function TripsPage() {
               <Button component={Link} to={`/${generateTripSlug(trip.name)}/schedule`}>Schedule</Button>
             </Group>
           </Group>
+          {openMapTripId === trip.id && (
+            <div style={{ marginTop: 12 }}>
+              <TripMap city={getTripCity(trip)} />
+            </div>
+          )}
         </Card>
       ))}
 

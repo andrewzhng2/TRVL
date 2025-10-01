@@ -95,11 +95,10 @@ function HeaderContent() {
     window.location.replace('/login')
   }
   return (
-    <Group h="100%" px="md" justify="space-between">
+    <Group h="100%" pl="xl" pr="md" justify="space-between">
       <Link to="/trips" style={{ textDecoration: 'none', color: 'inherit' }}>
         <Group gap={8}>
-          <Image alt="TRVL logo" src="/vite.svg" w={24} h={24} />
-          <Title order={4}>TRVL</Title>
+          <Title order={2} className="brand-logo">TRVL</Title>
         </Group>
       </Link>
       {session && (
