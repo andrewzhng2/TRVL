@@ -44,10 +44,10 @@ function EventsPanel({
   const COLUMN_STACK_MAX_HEIGHT = MAX_VISIBLE_CARDS * CARD_MIN_HEIGHT + (MAX_VISIBLE_CARDS - 1) * CARD_GAP_PX
 
   return (
-    <Paper withBorder p="sm" radius="md" h="100%" style={{ gridColumn: 'span 2' }}>
+    <Paper withBorder p="sm" radius="md" h="100%" style={{ gridColumn: 'span 2', backgroundColor: '#1D2F6F', border: '1px solid #000000' }}>
       <Stack gap="sm" h="100%">
         <Group justify="space-between" align="center">
-          <Title order={4}>Events</Title>
+          <Title order={4} style={{ color: '#FFFFFF', fontSize: '1.5rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Events</Title>
           <Select
             data={[
               { value: 'activities', label: 'Activities' },
@@ -108,11 +108,13 @@ function ScheduleEventCard({
   originDayIndex,
   originHour,
   onDragStart,
+  onDragEnd,
 }: {
   event: ScheduledEvent
   originDayIndex: number
   originHour: number
   onDragStart?: () => void
+  onDragEnd?: () => void
 }) {
   return (
     <div
@@ -129,6 +131,9 @@ function ScheduleEventCard({
         e.dataTransfer.setData('text/plain', serialized)
         e.dataTransfer.effectAllowed = 'move'
         onDragStart?.()
+      }}
+      onDragEnd={() => {
+        onDragEnd?.()
       }}
       style={{ height: '100%' }}
     >
@@ -202,31 +207,31 @@ function WeekHeader({
         alignItems: 'center',
       }}
     >
-      <Box />
-      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box style={{ backgroundColor: '#1D2F6F' }} />
+      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1D2F6F' }}>
         <ActionIcon 
-          variant="subtle" 
+          variant="light" 
           size="sm" 
           onClick={onPreviousWeek}
           disabled={!canNavigatePrevious}
-          style={{ opacity: canNavigatePrevious ? 1 : 0.3 }}
+          style={{ opacity: canNavigatePrevious ? 1 : 0.3, color: '#1D2F6F', backgroundColor: 'white', border: '2px solid #2E6CF6' }}
         >
           <IconChevronLeft size={16} />
         </ActionIcon>
       </Box>
       {weekData.map((day) => (
         <Box key={`${day.dayName}-${day.dayNumber}`} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <Title order={4}>{day.dayName}</Title>
-          <Text size="sm" c="dimmed">{day.dayNumber}</Text>
+          <Title order={4} style={{ color: '#FFFFFF' }}>{day.dayName}</Title>
+          <Text size="sm" style={{ color: '#FFFFFF' }}>{day.dayNumber}</Text>
         </Box>
       ))}
-      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1D2F6F' }}>
         <ActionIcon 
-          variant="subtle" 
+          variant="light" 
           size="sm" 
           onClick={onNextWeek}
           disabled={!canNavigateNext}
-          style={{ opacity: canNavigateNext ? 1 : 0.3 }}
+          style={{ opacity: canNavigateNext ? 1 : 0.3, color: '#1D2F6F', backgroundColor: 'white', border: '2px solid #2E6CF6' }}
         >
           <IconChevronRight size={16} />
         </ActionIcon>
@@ -252,6 +257,7 @@ function WeekBody({
 }) {
   const hours = useMemo(() => Array.from({ length: END_HOUR_24 - START_HOUR_24 }, (_, i) => START_HOUR_24 + i), [])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const isDraggingScheduledRef = useRef(false)
 
   const getWeekData = () => {
     if (!tripStartDate) return []
@@ -296,7 +302,7 @@ function WeekBody({
   }, [])
 
   return (
-    <ScrollArea.Autosize ref={scrollAreaRef} type="auto" mah={`calc(100dvh - 220px)`} offsetScrollbars>
+    <ScrollArea.Autosize ref={scrollAreaRef} type="auto" mah={`calc(100dvh - 220px)`} offsetScrollbars style={{ backgroundColor: '#1D2F6F' }}>
       <Stack gap={0}>
         {hours.map(hour => (
           <Box
@@ -318,21 +324,28 @@ function WeekBody({
                 paddingLeft: 4,
                 borderBottom: '1px solid transparent',
                 position: 'relative',
-                backgroundColor: 'white',
+                backgroundColor: '#1D2F6F',
                 zIndex: 1,
               }}
             >
-              <Text size="xs" c="dimmed" style={{ position: 'absolute', top: '-6px', left: '4px', backgroundColor: 'white', padding: '0 2px' }}>{formatHourLabel(hour)}</Text>
+              <Text size="xs" style={{ color: '#FFFFFF', position: 'absolute', top: '-6px', left: '4px', backgroundColor: '#1D2F6F', padding: '0 2px' }}>{formatHourLabel(hour)}</Text>
             </Box>
             {/* Left arrow cell */}
-            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent' }} />
+            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent', backgroundColor: '#1D2F6F' }} />
             {/* Day cells */}
             {weekData.map((_, dayIndex) => {
               const scheduled = getEvent(dayIndex, hour)
               return (
                 <Box
                   key={`${dayIndex}-${hour}`}
-                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+                  onDragOver={e => {
+                    e.preventDefault()
+                    try {
+                      e.dataTransfer.dropEffect = isDraggingScheduledRef.current ? 'move' : 'copy'
+                    } catch {
+                      // some browsers may throw if dropEffect not supported; ignore
+                    }
+                  }}
                   onDrop={e => {
                     e.preventDefault()
                     let data = e.dataTransfer.getData('application/json')
@@ -350,27 +363,25 @@ function WeekBody({
                     height: SLOT_HEIGHT_PX,
                     borderBottom: '1px solid var(--mantine-color-gray-2)',
                     borderRight: '1px solid var(--mantine-color-gray-2)',
+                    backgroundColor: 'white',
                   }}
                 >
                   {scheduled ? (
-                    <ScheduleEventCard event={scheduled} originDayIndex={dayIndex} originHour={hour} onDragStart={onScheduledDragStart} />
+                    <ScheduleEventCard 
+                      event={scheduled} 
+                      originDayIndex={dayIndex} 
+                      originHour={hour} 
+                      onDragStart={() => { isDraggingScheduledRef.current = true; onScheduledDragStart() }}
+                      onDragEnd={() => { isDraggingScheduledRef.current = false }}
+                    />
                   ) : (
-                    <Box
-                      style={{
-                        height: '100%',
-                        border: '1px solid var(--mantine-color-gray-2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                    </Box>
+                    <Box style={{ height: '100%' }} />
                   )}
                 </Box>
               )
             })}
             {/* Right arrow cell */}
-            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent' }} />
+            <Box style={{ height: SLOT_HEIGHT_PX, borderBottom: '1px solid transparent', backgroundColor: '#1D2F6F' }} />
           </Box>
         ))}
       </Stack>
@@ -468,7 +479,6 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
   function handleDropIntoSlot(dayIndex: number, hour: number, payload: DnDPayload) {
     const key = getKey(dayIndex, hour)
     setSlots(prev => {
-      if (prev[key]) return prev
       const next = { ...prev }
       if (payload.type === 'scheduled-event') {
         const fromKey = getKey(payload.fromDayIndex, payload.fromHour)
@@ -480,7 +490,7 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
   }
 
   function handleScheduledDragStart() {
-    // no-op now; we keep this to keep the API stable
+    // no-op here (handled inside WeekBody for per-instance state)
   }
 
   function handlePreviousWeek() {
@@ -503,7 +513,7 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
           selected={category}
           onChangeCategory={setCategory}
         />
-        <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column' }}>
+        <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', backgroundColor: '#1D2F6F' }}>
           <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
             <WeekHeader 
               currentWeekOffset={currentWeekOffset}
