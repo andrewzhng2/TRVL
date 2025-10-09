@@ -3,8 +3,44 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app import models, schemas
+from typing import List
 
 router = APIRouter(prefix="/trips", tags=["trips"])
+# Schedule endpoints
+@router.get("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
+def list_schedule(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    items = (
+        db.query(models.ScheduledEvent)
+        .filter(models.ScheduledEvent.trip_id == trip_id)
+        .all()
+    )
+    return items
+
+
+@router.post("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
+def overwrite_schedule(trip_id: int, payload: List[schemas.ScheduledEventCreate], db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    # Clear and replace atomically
+    db.query(models.ScheduledEvent).filter(models.ScheduledEvent.trip_id == trip_id).delete()
+    for item in payload:
+        db.add(models.ScheduledEvent(
+            trip_id=trip_id,
+            card_id=item.card_id,
+            day_index=item.day_index,
+            hour=item.hour,
+        ))
+    db.commit()
+    items = (
+        db.query(models.ScheduledEvent)
+        .filter(models.ScheduledEvent.trip_id == trip_id)
+        .all()
+    )
+    return items
 
 
 @router.get("/", response_model=list[schemas.TripRead])

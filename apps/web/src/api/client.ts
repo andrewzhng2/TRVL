@@ -177,3 +177,23 @@ export async function deleteTripLeg(tripId: number, legId: number): Promise<void
 }
 
 
+// Schedule
+export type ScheduledEvent = { id?: number; trip_id: number; card_id: number; day_index: number; hour: number }
+
+export async function getSchedule(tripId: number): Promise<ScheduledEvent[]> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/schedule`, { headers: getAuthHeaders() })
+  if (!res.ok) throw new Error('Failed to fetch schedule')
+  return res.json()
+}
+
+export async function saveSchedule(tripId: number, items: Omit<ScheduledEvent, 'id' | 'trip_id'>[]): Promise<ScheduledEvent[]> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/schedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify(items.map(i => ({ ...i, trip_id: tripId }))),
+  })
+  if (!res.ok) throw new Error('Failed to save schedule')
+  return res.json()
+}
+
+

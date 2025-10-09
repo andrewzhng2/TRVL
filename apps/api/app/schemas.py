@@ -113,3 +113,22 @@ class TripLegUpdate(BaseModel):
   order_index: Optional[int] = None
 
 
+class ScheduledEventBase(BaseModel):
+  trip_id: int
+  card_id: int
+  day_index: int
+  hour: int
+
+
+class ScheduledEventCreate(ScheduledEventBase):
+  pass
+
+
+class ScheduledEventRead(ScheduledEventBase):
+  id: int
+  created_by: Optional[int] = None
+  created_at: Optional[datetime] = None
+
+  class Config:
+    from_attributes = True
+

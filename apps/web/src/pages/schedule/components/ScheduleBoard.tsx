@@ -1,7 +1,8 @@
-import { Box, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title, ActionIcon } from '@mantine/core'
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { Box, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title, ActionIcon, Button } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
+import { IconChevronLeft, IconChevronRight, IconTrash } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { listBacklogCards, type BacklogCard as ApiBacklogCard, listTrips, type Trip } from '../../../api/client'
+import { listBacklogCards, type BacklogCard as ApiBacklogCard, listTrips, type Trip, getSchedule, saveSchedule } from '../../../api/client'
 
 type Category = 'hotels' | 'activities' | 'food' | 'clubs'
 
@@ -70,14 +71,20 @@ function EventsPanel({
                 withBorder
                 p="xs"
                 radius="md"
-                draggable
+                draggable={true}
                 onDragStart={e => {
                   const payload = { type: 'backlog-card', card: ev }
                   const serialized = JSON.stringify(payload)
                   e.dataTransfer.setData('application/json', serialized)
                   e.dataTransfer.setData('text/plain', serialized)
                   e.dataTransfer.effectAllowed = 'copy'
+                  try {
+                    e.dataTransfer.dropEffect = 'copy'
+                  } catch {
+                    /* ignore unsupported dropEffect */
+                  }
                 }}
+                onDragEnd={() => undefined}
                 style={{ cursor: 'grab', minHeight: CARD_MIN_HEIGHT }}
               >
                 <Group justify="space-between" align="center">
@@ -109,12 +116,14 @@ function ScheduleEventCard({
   originHour,
   onDragStart,
   onDragEnd,
+  onDelete,
 }: {
   event: ScheduledEvent
   originDayIndex: number
   originHour: number
   onDragStart?: () => void
   onDragEnd?: () => void
+  onDelete?: () => void
 }) {
   return (
     <div
@@ -137,11 +146,21 @@ function ScheduleEventCard({
       }}
       style={{ height: '100%' }}
     >
-      <Paper withBorder p="xs" radius={0} style={{ height: '100%', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'grab' }}>
+      <Paper withBorder p="xs" radius={0} style={{ height: '100%', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'grab', position: 'relative' }}>
         <Group justify="space-between" align="center" style={{ width: '100%' }}>
           <Text size="sm" fw={600} style={{ wordBreak: 'break-word' }}>{event.title}</Text>
           <Text size="sm" c="dimmed">Desire: {typeof event.desire === 'number' ? event.desire.toFixed(1) : '—'}</Text>
         </Group>
+        <ActionIcon
+          variant="filled"
+          color="red"
+          size="xs"
+          onClick={e => { e.stopPropagation(); e.preventDefault(); onDelete?.() }}
+          style={{ position: 'absolute', right: 4, bottom: 4, cursor: 'pointer' }}
+          title="Remove"
+        >
+          <IconTrash size={12} />
+        </ActionIcon>
       </Paper>
     </div>
   )
@@ -244,6 +263,7 @@ function WeekBody({
   getEvent,
   onDropIntoSlot,
   onScheduledDragStart,
+  onRemoveFromSlot,
   currentWeekOffset,
   tripStartDate,
   tripEndDate,
@@ -251,6 +271,7 @@ function WeekBody({
   getEvent: (dayIndex: number, hour: number) => ScheduledEvent | null
   onDropIntoSlot: (dayIndex: number, hour: number, payload: DnDPayload) => void
   onScheduledDragStart: () => void
+  onRemoveFromSlot: (dayIndex: number, hour: number) => void
   currentWeekOffset: number
   tripStartDate?: string | null
   tripEndDate?: string | null
@@ -301,6 +322,17 @@ function WeekBody({
     }
   }, [])
 
+  // Safety net: ensure the drag mode resets even if the card unmounts mid-drag
+  useEffect(() => {
+    const reset = () => { isDraggingScheduledRef.current = false }
+    window.addEventListener('dragend', reset)
+    window.addEventListener('drop', reset)
+    return () => {
+      window.removeEventListener('dragend', reset)
+      window.removeEventListener('drop', reset)
+    }
+  }, [])
+
   return (
     <ScrollArea.Autosize ref={scrollAreaRef} type="auto" mah={`calc(100dvh - 220px)`} offsetScrollbars style={{ backgroundColor: '#1D2F6F' }}>
       <Stack gap={0}>
@@ -348,6 +380,8 @@ function WeekBody({
                   }}
                   onDrop={e => {
                     e.preventDefault()
+                    // Reset drag mode on any drop
+                    isDraggingScheduledRef.current = false
                     let data = e.dataTransfer.getData('application/json')
                     if (!data) data = e.dataTransfer.getData('text/plain')
                     try {
@@ -373,6 +407,7 @@ function WeekBody({
                       originHour={hour} 
                       onDragStart={() => { isDraggingScheduledRef.current = true; onScheduledDragStart() }}
                       onDragEnd={() => { isDraggingScheduledRef.current = false }}
+                      onDelete={() => onRemoveFromSlot(dayIndex, hour)}
                     />
                   ) : (
                     <Box style={{ height: '100%' }} />
@@ -395,6 +430,8 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
   const [slots, setSlots] = useState<Record<string, ScheduledEvent>>({})
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
   const [trip, setTrip] = useState<Trip | null>(null)
+  const [isDirty, setIsDirty] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   // simple flag that a drag started from a scheduled card (no removing outside)
 
   const gridHeight = useMemo(() => 'calc(100dvh - 180px)', [])
@@ -431,7 +468,35 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
     return () => { mounted = false }
   }, [])
 
-  const visibleEvents = useMemo(() => events.filter(ev => ev.category === category && ev.locked_in), [events, category])
+  // Load existing schedule for the current 5-day window (absolute day_index stored from trip start)
+  useEffect(() => {
+    if (!tripId) return
+    let mounted = true
+    const windowStart = currentWeekOffset * 5
+    const windowEnd = windowStart + 4
+    // Immediately clear current window so previous week's cards don't linger visually
+    setSlots({})
+    getSchedule(tripId)
+      .then(items => {
+        if (!mounted) return
+        const next: Record<string, ScheduledEvent> = {}
+        for (const it of items) {
+          if (it.day_index < windowStart || it.day_index > windowEnd) continue
+          const localDayIndex = it.day_index - windowStart
+          const ev = events.find(e => e.id === String(it.card_id))
+          if (!ev) continue
+          next[`${localDayIndex}-${it.hour}`] = { ...ev, dayIndex: localDayIndex, hour: it.hour }
+        }
+        setSlots(next)
+      })
+      .catch(() => { /* ignore */ })
+    return () => { mounted = false }
+  }, [tripId, events, currentWeekOffset])
+
+  // Always compute fresh array so React rebinds draggable nodes across category changes
+  const visibleEvents = useMemo(() => {
+    return events.filter(ev => ev.category === category && ev.locked_in)
+  }, [events, category])
 
   // Calculate navigation limits based on trip dates
   const navigationLimits = useMemo(() => {
@@ -485,8 +550,40 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
         delete next[fromKey]
       }
       next[key] = { ...payload.card, dayIndex, hour }
+      setIsDirty(true)
       return next
     })
+  }
+
+  function handleRemoveFromSlot(dayIndex: number, hour: number) {
+    const key = getKey(dayIndex, hour)
+    setSlots(prev => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      setIsDirty(true)
+      return next
+    })
+  }
+
+  async function handleSaveAll() {
+    if (!tripId) return
+    const windowStart = currentWeekOffset * 5
+    const items = Object.values(slots).map(s => ({
+      card_id: Number(s.id),
+      day_index: windowStart + s.dayIndex,
+      hour: s.hour,
+    }))
+    try {
+      setIsSaving(true)
+      await saveSchedule(tripId, items)
+      setIsDirty(false)
+      notifications.show({ message: 'Changes saved', color: 'green' })
+    } catch {
+      notifications.show({ message: 'Failed to save', color: 'red' })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function handleScheduledDragStart() {
@@ -513,7 +610,7 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
           selected={category}
           onChangeCategory={setCategory}
         />
-        <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', backgroundColor: '#1D2F6F' }}>
+        <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#1D2F6F' }}>
           <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
             <WeekHeader 
               currentWeekOffset={currentWeekOffset}
@@ -528,12 +625,18 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
               getEvent={getEvent}
               onDropIntoSlot={handleDropIntoSlot}
               onScheduledDragStart={handleScheduledDragStart}
+              onRemoveFromSlot={handleRemoveFromSlot}
               currentWeekOffset={currentWeekOffset}
               tripStartDate={trip?.start_date}
               tripEndDate={trip?.end_date}
             />
           </Stack>
         </Paper>
+        <Box style={{ gridColumn: '3 / span 5', display: 'flex', justifyContent: 'flex-end', marginTop: 2, marginRight: 10}}>
+          <Button size="sm" variant="filled" color="blue" disabled={!isDirty || isSaving} onClick={handleSaveAll}>
+            {isSaving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </Box>
       </SimpleGrid>
     </Box>
   )

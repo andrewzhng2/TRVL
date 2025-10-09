@@ -11,6 +11,7 @@ import TripBacklog from './pages/trip/TripBacklog'
 import TripSchedule from './pages/trip/TripSchedule'
 import TripTravel from './pages/trip/TripTravel'
 import TripPacking from './pages/trip/TripPacking'
+import TripBudget from './pages/trip/TripBudget'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2)
@@ -76,6 +77,7 @@ function App() {
           <Route path="/:tripSlug/schedule" element={<RequireAuth><TripSchedule /></RequireAuth>} />
           <Route path="/:tripSlug/travel" element={<RequireAuth><TripTravel /></RequireAuth>} />
           <Route path="/:tripSlug/packing" element={<RequireAuth><TripPacking /></RequireAuth>} />
+          <Route path="/:tripSlug/budget" element={<RequireAuth><TripBudget /></RequireAuth>} />
         </Routes>
       </AppShell.Main>
     </AppShell>

@@ -1,5 +1,5 @@
 import { NavLink, Stack } from '@mantine/core'
-import { IconBackpack, IconCalendar, IconLayoutGrid, IconList, IconPlane, IconTrain } from '@tabler/icons-react'
+import { IconBackpack, IconCalendar, IconLayoutGrid, IconList, IconPlane, IconTrain, IconCurrencyDollar } from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { listTrips, type Trip } from '../api/client'
@@ -99,6 +99,13 @@ function Navigation() {
                     to={`/${tripSlug}/packing`}
                     active={isTripSection(tripSlug, 'packing')}
                     leftSection={<IconBackpack size={16} style={{ transform: 'translateY(1px)' }} />}
+                  />
+                  <NavLink 
+                    label="Budget / Expenses" 
+                    component={Link} 
+                    to={`/${tripSlug}/budget`}
+                    active={isTripSection(tripSlug, 'budget')}
+                    leftSection={<IconCurrencyDollar size={16} style={{ transform: 'translateY(1px)' }} />}
                   />
                 </NavLink>
               )

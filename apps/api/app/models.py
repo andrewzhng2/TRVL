@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Boolean, Numeric, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Boolean, Numeric, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -90,3 +90,20 @@ class TripLeg(Base):
 
     trip: Mapped[Trip] = relationship(back_populates="legs")
 
+
+class ScheduledEvent(Base):
+    __tablename__ = "scheduled_events"
+    __table_args__ = (
+        UniqueConstraint("trip_id", "day_index", "hour", name="uq_schedule_slot"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), nullable=False)
+    card_id: Mapped[int] = mapped_column(ForeignKey("backlog_cards.id", ondelete="CASCADE"), nullable=False)
+    day_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    hour: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    trip: Mapped[Trip] = relationship("Trip")
+    card: Mapped[BacklogCard] = relationship("BacklogCard")
