@@ -169,3 +169,85 @@ def delete_trip_leg(trip_id: int, leg_id: int, db: Session = Depends(get_db)):
     return {"message": "Trip leg deleted successfully"}
 
 
+# Travel Segments endpoints
+@router.get("/{trip_id}/travel", response_model=list[schemas.TravelSegmentRead])
+def list_travel_segments(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    items = (
+        db.query(models.TravelSegment)
+        .filter(models.TravelSegment.trip_id == trip_id)
+        .order_by(models.TravelSegment.order_index)
+        .all()
+    )
+    return items
+
+
+@router.post("/{trip_id}/travel", response_model=schemas.TravelSegmentRead)
+def create_travel_segment(trip_id: int, payload: schemas.TravelSegmentCreate, db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    seg = models.TravelSegment(
+        trip_id=trip_id,
+        edge_type=payload.edge_type,
+        order_index=payload.order_index,
+        transport_type=payload.transport_type,
+        from_leg_id=payload.from_leg_id,
+        to_leg_id=payload.to_leg_id,
+        title=payload.title or "",
+        badge=payload.badge or "",
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+    )
+    db.add(seg)
+    db.commit()
+    db.refresh(seg)
+    return seg
+
+
+@router.patch("/{trip_id}/travel/{segment_id}", response_model=schemas.TravelSegmentRead)
+def update_travel_segment(trip_id: int, segment_id: int, payload: schemas.TravelSegmentUpdate, db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    seg = db.get(models.TravelSegment, segment_id)
+    if not seg or seg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Travel segment not found")
+    if payload.edge_type is not None:
+        seg.edge_type = payload.edge_type
+    if payload.order_index is not None:
+        seg.order_index = payload.order_index
+    if payload.transport_type is not None:
+        seg.transport_type = payload.transport_type
+    if payload.from_leg_id is not None:
+        seg.from_leg_id = payload.from_leg_id
+    if payload.to_leg_id is not None:
+        seg.to_leg_id = payload.to_leg_id
+    if payload.title is not None:
+        seg.title = payload.title
+    if payload.badge is not None:
+        seg.badge = payload.badge
+    if payload.start_date is not None:
+        seg.start_date = payload.start_date
+    if payload.end_date is not None:
+        seg.end_date = payload.end_date
+    db.add(seg)
+    db.commit()
+    db.refresh(seg)
+    return seg
+
+
+@router.delete("/{trip_id}/travel/{segment_id}")
+def delete_travel_segment(trip_id: int, segment_id: int, db: Session = Depends(get_db)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    seg = db.get(models.TravelSegment, segment_id)
+    if not seg or seg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Travel segment not found")
+    db.delete(seg)
+    db.commit()
+    return {"message": "Travel segment deleted successfully"}
+

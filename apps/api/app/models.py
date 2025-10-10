@@ -64,6 +64,7 @@ class Trip(Base):
 
     sections: Mapped[list["TripSection"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     legs: Mapped[list["TripLeg"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
+    travel_segments: Mapped[list["TravelSegment"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
 
 
 class TripSection(Base):
@@ -107,3 +108,23 @@ class ScheduledEvent(Base):
 
     trip: Mapped[Trip] = relationship("Trip")
     card: Mapped[BacklogCard] = relationship("BacklogCard")
+
+
+class TravelSegment(Base):
+    __tablename__ = "travel_segments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), nullable=False)
+    # edge_type indicates where this segment lives relative to legs: departure | between | return
+    edge_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    from_leg_id: Mapped[int | None] = mapped_column(ForeignKey("trip_legs.id", ondelete="CASCADE"), nullable=True)
+    to_leg_id: Mapped[int | None] = mapped_column(ForeignKey("trip_legs.id", ondelete="CASCADE"), nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    transport_type: Mapped[str] = mapped_column(String(20), nullable=False, default="plane")
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    badge: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    trip: Mapped[Trip] = relationship(back_populates="travel_segments")

@@ -77,6 +77,7 @@ class TripCreate(TripBase):
 class TripRead(TripBase):
   id: int
   legs: list["TripLegRead"] = []
+  travel_segments: list["TravelSegmentRead"] = []
 
   class Config:
     from_attributes = True
@@ -111,6 +112,41 @@ class TripLegUpdate(BaseModel):
   start_date: Optional[str | None] = None
   end_date: Optional[str | None] = None
   order_index: Optional[int] = None
+
+
+class TravelSegmentBase(BaseModel):
+  edge_type: str  # departure | between | return
+  order_index: int = 0
+  transport_type: str = "plane"  # plane/train/car/bus/bike/walk/boat/subway
+  from_leg_id: Optional[int] = None
+  to_leg_id: Optional[int] = None
+  title: str = ""
+  badge: str = ""
+  start_date: Optional[str] = None
+  end_date: Optional[str] = None
+
+
+class TravelSegmentCreate(TravelSegmentBase):
+  pass
+
+
+class TravelSegmentRead(TravelSegmentBase):
+  id: int
+
+  class Config:
+    from_attributes = True
+
+
+class TravelSegmentUpdate(BaseModel):
+  edge_type: Optional[str] = None
+  order_index: Optional[int] = None
+  transport_type: Optional[str] = None
+  from_leg_id: Optional[int | None] = None
+  to_leg_id: Optional[int | None] = None
+  title: Optional[str] = None
+  badge: Optional[str] = None
+  start_date: Optional[str | None] = None
+  end_date: Optional[str | None] = None
 
 
 class ScheduledEventBase(BaseModel):

@@ -177,6 +177,54 @@ export async function deleteTripLeg(tripId: number, legId: number): Promise<void
 }
 
 
+// Travel Segments
+export type TravelSegment = {
+  id: number
+  edge_type: 'departure' | 'between' | 'return' | 'leg' | 'custom'
+  order_index: number
+  transport_type: 'plane' | 'train' | 'car' | 'bus' | 'bike' | 'walk' | 'boat' | 'subway'
+  from_leg_id?: number | null
+  to_leg_id?: number | null
+  title?: string
+  badge?: string
+  start_date?: string | null
+  end_date?: string | null
+}
+
+export type TravelSegmentCreate = Omit<TravelSegment, 'id'>
+export type TravelSegmentUpdate = Partial<Omit<TravelSegment, 'id'>>
+
+export async function listTravelSegments(tripId: number): Promise<TravelSegment[]> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel`)
+  if (!res.ok) throw new Error('Failed to list travel segments')
+  return res.json()
+}
+
+export async function createTravelSegment(tripId: number, payload: TravelSegmentCreate): Promise<TravelSegment> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to create travel segment')
+  return res.json()
+}
+
+export async function updateTravelSegment(tripId: number, segmentId: number, payload: TravelSegmentUpdate): Promise<TravelSegment> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel/${segmentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to update travel segment')
+  return res.json()
+}
+
+export async function deleteTravelSegment(tripId: number, segmentId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel/${segmentId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Failed to delete travel segment')
+}
+
 // Schedule
 export type ScheduledEvent = { id?: number; trip_id: number; card_id: number; day_index: number; hour: number }
 
