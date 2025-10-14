@@ -60,11 +60,13 @@ class Trip(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
     sections: Mapped[list["TripSection"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     legs: Mapped[list["TripLeg"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     travel_segments: Mapped[list["TravelSegment"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
+    creator: Mapped["User | None"] = relationship("User")
 
 
 class TripSection(Base):

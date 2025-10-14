@@ -68,6 +68,7 @@ class TripBase(BaseModel):
   name: str
   start_date: Optional[str] = None
   end_date: Optional[str] = None
+  created_by: Optional[int] = None
 
 
 class TripCreate(TripBase):
@@ -78,6 +79,8 @@ class TripRead(TripBase):
   id: int
   legs: list["TripLegRead"] = []
   travel_segments: list["TravelSegmentRead"] = []
+  created_by: Optional[int] = None
+  creator: Optional["UserRead"] = None
 
   class Config:
     from_attributes = True

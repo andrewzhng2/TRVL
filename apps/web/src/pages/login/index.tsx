@@ -1,6 +1,6 @@
 import { Button, Center, Paper, Stack, Text, Title } from '@mantine/core'
 import { useEffect, useState } from 'react'
-import type { SessionRead } from '../../api/client'
+import { loginWithGoogle, type SessionRead } from '../../api/client'
 
 function LoginPage() {
   const [error, setError] = useState<string | null>(null)
@@ -12,11 +12,18 @@ function LoginPage() {
     const params = new URLSearchParams(hash)
     const idToken = params.get('id_token')
     if (idToken) {
-      // Store optimistic session and immediately leave login
-      const optimistic = buildOptimisticSession(idToken)
-      if (optimistic) localStorage.setItem('trvl_session', JSON.stringify(optimistic))
-      history.replaceState(null, '', window.location.pathname + window.location.search)
-      window.location.replace('/trips')
+      ;(async () => {
+        try {
+          const session = await loginWithGoogle(idToken)
+          localStorage.setItem('trvl_session', JSON.stringify(session))
+          // Clean the hash and redirect
+          history.replaceState(null, '', window.location.pathname + window.location.search)
+          window.location.replace('/trips')
+        } catch (e) {
+          console.error('Google login failed', e)
+          setError((e as Error).message || 'Login failed')
+        }
+      })()
       return
     }
 
@@ -68,28 +75,9 @@ function LoginPage() {
   )
 }
 
-function parseJwt(token: string): { email?: string; name?: string; picture?: string } | null {
-  try {
-    const parts = token.split('.')
-    if (parts.length < 2) return null
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return payload
-  } catch {
-    return null
-  }
-}
-
-function buildOptimisticSession(idToken: string): SessionRead | null {
-  const claims = parseJwt(idToken)
-  if (!claims) return null
-  const user = {
-    id: 0,
-    email: claims.email || '',
-    name: claims.name || claims.email || 'User',
-    picture: claims.picture || '',
-  }
-  return { token: `local:${idToken.slice(0, 16)}`, user }
-}
+// The previous local dev-only optimistic session flow has been removed in favor of
+// exchanging the Google ID token with the backend, which validates and persists
+// the user and returns an API session token.
 
 export default LoginPage
 

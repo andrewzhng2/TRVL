@@ -36,6 +36,7 @@ function TripsPage() {
 
   const [trips, setTrips] = useState<Trip[]>([])
   const [openMapTripIds, setOpenMapTripIds] = useState<Set<number>>(() => new Set())
+  const [starVersion, setStarVersion] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -107,6 +108,30 @@ function TripsPage() {
   }
 
   function getTripCity(trip: Trip): string {
+    // Prefer starred leg name if available via localStorage
+    try {
+      const key = `trvl_starred_leg_${trip.id}`
+      const raw = localStorage.getItem(key)
+      let starredId: number | null = null
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { id?: number; name?: string } | number
+          if (typeof parsed === 'number') starredId = parsed
+          else if (parsed && typeof parsed.id === 'number') starredId = parsed.id
+        } catch {
+          const num = Number(raw)
+          if (Number.isFinite(num)) starredId = num
+        }
+      }
+      if (starredId != null && trip.legs && trip.legs.length > 0) {
+        const starred = trip.legs.find(l => l.id === starredId)
+        const name = (starred?.name || '').trim()
+        if (name) return name
+      }
+    } catch {
+      // ignore localStorage access/parse errors
+    }
+
     const legCity = trip.legs && trip.legs.length > 0 ? (trip.legs[0]?.name || '').trim() : ''
     if (legCity) return legCity
     const name = (trip.name || '').trim()
@@ -135,7 +160,9 @@ function TripsPage() {
                   <IconPencil size={16} />
                 </ActionIcon>
               </Group>
-              <div />
+              <Text size="sm" c="white">
+                Created by: {trip.creator?.name || 'Unknown'}
+              </Text>
             </Group>
           </div>
           <Group justify="space-between" align="center">
@@ -166,7 +193,7 @@ function TripsPage() {
           </Group>
           {openMapTripIds.has(trip.id) && (
             <div style={{ marginTop: 12 }}>
-              <TripMap city={getTripCity(trip)} />
+              <TripMap key={`map-${trip.id}-${starVersion}`} city={getTripCity(trip)} />
             </div>
           )}
         </Card>
@@ -184,7 +211,11 @@ function TripsPage() {
           </Group>
           
           {form.id && (
-            <TripLegsManager tripId={form.id} tripName={form.name || 'Trip'} />
+            <TripLegsManager 
+              tripId={form.id} 
+              tripName={form.name || 'Trip'} 
+              onStarChange={() => setStarVersion(v => v + 1)}
+            />
           )}
           
           <Group justify="space-between">

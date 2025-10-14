@@ -9,10 +9,10 @@ import {
   Title,
   Card,
   Badge,
-  Divider
+  
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
-import { IconPencil, IconPlus, IconTrash, IconGripVertical } from '@tabler/icons-react'
+import { IconPencil, IconPlus, IconTrash, IconGripVertical, IconStar, IconStarFilled } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import { 
@@ -27,9 +27,10 @@ import {
 interface TripLegsManagerProps {
   tripId: number
   tripName: string
+  onStarChange?: (legId: number) => void
 }
 
-function TripLegsManager({ tripId, tripName }: TripLegsManagerProps) {
+function TripLegsManager({ tripId, tripName, onStarChange }: TripLegsManagerProps) {
   const [legs, setLegs] = useState<TripLeg[]>([])
   const [loading, setLoading] = useState(true)
   const [editOpen, { open: openEdit, close: closeEdit }] = useDisclosure(false)
@@ -49,6 +50,7 @@ function TripLegsManager({ tripId, tripName }: TripLegsManagerProps) {
   const [editLoading, setEditLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
+  const [starredLegId, setStarredLegId] = useState<number | null>(null)
 
   function coerceDate(v: unknown): Date | null {
     if (v == null) return null
@@ -65,7 +67,20 @@ function TripLegsManager({ tripId, tripName }: TripLegsManagerProps) {
   }
 
   useEffect(() => {
-    loadLegs()
+    let mounted = true
+    async function fetchLegs() {
+      try {
+        setLoading(true)
+        const legsData = await listTripLegs(tripId)
+        if (mounted) setLegs(legsData)
+      } catch (error) {
+        console.error('Failed to load legs:', error)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    fetchLegs()
+    return () => { mounted = false }
   }, [tripId])
 
   async function loadLegs() {
@@ -78,6 +93,46 @@ function TripLegsManager({ tripId, tripName }: TripLegsManagerProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Sync starred leg with localStorage, default to first leg by order_index
+  useEffect(() => {
+    if (loading) return
+    const key = `trvl_starred_leg_${tripId}`
+    const raw = localStorage.getItem(key)
+    let savedId: number | null = null
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { id?: number; name?: string } | number
+        if (typeof parsed === 'number') savedId = parsed
+        else if (parsed && typeof parsed.id === 'number') savedId = parsed.id
+      } catch {
+        // legacy or invalid value
+        const num = Number(raw)
+        if (Number.isFinite(num)) savedId = num
+      }
+    }
+    if (savedId != null && legs.some(l => l.id === savedId)) {
+      setStarredLegId(savedId)
+      return
+    }
+    if (legs.length > 0) {
+      const first = [...legs].sort((a, b) => a.order_index - b.order_index)[0]
+      setStarredLegId(first.id)
+      localStorage.setItem(key, JSON.stringify({ id: first.id, name: first.name }))
+      onStarChange?.(first.id)
+    } else {
+      setStarredLegId(null)
+      localStorage.removeItem(key)
+      onStarChange?.(0)
+    }
+  }, [tripId, legs, onStarChange, loading])
+
+  function handleToggleStar(leg: TripLeg) {
+    const key = `trvl_starred_leg_${tripId}`
+    setStarredLegId(leg.id)
+    localStorage.setItem(key, JSON.stringify({ id: leg.id, name: leg.name }))
+    onStarChange?.(leg.id)
   }
 
   async function handleCreateLeg() {
@@ -188,6 +243,15 @@ function TripLegsManager({ tripId, tripName }: TripLegsManagerProps) {
                   </Stack>
                 </Group>
                 <Group gap="xs">
+                  <ActionIcon 
+                    variant={starredLegId === leg.id ? 'white' : 'subtle'} 
+                    onClick={() => handleToggleStar(leg)} 
+                    aria-label={starredLegId === leg.id ? 'Unstar Leg' : 'Star Leg'}
+                  >
+                    {starredLegId === leg.id 
+                      ? <IconStarFilled size={16} color="var(--mantine-color-yellow-6)" /> 
+                      : <IconStar size={16} />}
+                  </ActionIcon>
                   <ActionIcon variant="subtle" onClick={() => openEditLeg(leg)} aria-label="Edit Leg">
                     <IconPencil size={16} />
                   </ActionIcon>

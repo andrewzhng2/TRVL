@@ -195,7 +195,7 @@ function TripTravel() {
                 <Stack gap={2}>
                   <Group gap="xs">
                     <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='departure')?.title) || 'Departure Travel'}</Text>
-                    <Badge size="sm" variant="light">{(segments.find(s => s.edge_type==='departure')?.badge) || 'Start'}</Badge>
+                    <Badge size="lg" variant="light">{(segments.find(s => s.edge_type==='departure')?.badge) || 'Start'}</Badge>
                   </Group>
                   <Text size="sm" c="dimmed">Trip start: {(segments.find(s => s.edge_type==='departure')?.start_date) ?? (trip.start_date ?? 'TBD')}</Text>
                 </Stack>
@@ -238,7 +238,7 @@ function TripTravel() {
           ) : legs.length === 0 ? (
             <>
               <Text c="dimmed" ta="center">No trip legs yet.</Text>
-              {(function() {
+              {(function() { 
                 const customs = segments
                   .filter(s => s.edge_type === 'custom' && (s.from_leg_id == null) && (s.to_leg_id == null))
                   .sort((a,b) => a.order_index - b.order_index)
@@ -261,10 +261,10 @@ function TripTravel() {
                               }}
                             />
                             <Stack gap={2}>
-                              <Group gap="xs">
-                                <Text fw={500} style={{ fontSize: '2rem' }}>{seg.title || 'Travel'}</Text>
-                                <Badge size="sm" variant="light">{seg.badge || 'Custom'}</Badge>
-                              </Group>
+                            <Group gap="xs">
+                              <Text fw={500} style={{ fontSize: '2rem' }}>{seg.title || 'Travel'}</Text>
+                              <Badge size="lg" variant="light">{seg.badge || 'Custom'}</Badge>
+                            </Group>
                               {(seg.start_date || seg.end_date) && (
                                 <Text size="sm" c="dimmed">{seg.start_date ?? ''}{(seg.start_date || seg.end_date) ? ' → ' : ''}{seg.end_date ?? ''}</Text>
                               )}
@@ -367,7 +367,7 @@ function TripTravel() {
                       <Stack gap={2}>
                         <Group gap="xs">
                           <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.title) || leg.name}</Text>
-                          <Badge size="sm" variant="light">{(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.badge) || `Leg ${index + 1}`}</Badge>
+                          <Badge size="lg" variant="light">{(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.badge) || `Leg ${index + 1}`}</Badge>
                         </Group>
                         <Text size="sm" c="dimmed">
                           {(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.start_date) ?? (leg.start_date ?? 'Start')} → {(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.end_date) ?? (leg.end_date ?? 'End')}
@@ -435,8 +435,8 @@ function TripTravel() {
                           />
                           <Stack gap={2}>
                             <Group gap="xs">
-                              <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.title) || 'Between Travel'}</Text>
-                              <Badge size="sm" variant="light">{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.badge) || `${leg.name} → ${next.name}`}</Badge>
+                              <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.title) || 'Between'}</Text>
+                              <Badge size="lg" variant="light">{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.badge) || `${leg.name} → ${next.name}`}</Badge>
                             </Group>
           <Text size="sm" c="dimmed">
                               {(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.start_date) ?? (leg.end_date ?? 'End')} → {(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.end_date) ?? (next.start_date ?? 'Start')}
@@ -498,10 +498,10 @@ function TripTravel() {
                               }}
                             />
                             <Stack gap={2}>
-                              <Group gap="xs">
-                                <Text fw={500} style={{ fontSize: '2rem' }}>{seg.title || 'Travel'}</Text>
-                                <Badge size="sm" variant="light">{seg.badge || 'Custom'}</Badge>
-                              </Group>
+                            <Group gap="xs">
+                              <Text fw={500} style={{ fontSize: '2rem' }}>{seg.title || 'Travel'}</Text>
+                              <Badge size="xl" variant="light">{seg.badge || 'Custom'}</Badge>
+                            </Group>
                               {(seg.start_date || seg.end_date) && (
                                 <Text size="sm" c="dimmed">{seg.start_date ?? ''}{(seg.start_date || seg.end_date) ? ' → ' : ''}{seg.end_date ?? ''}</Text>
                               )}
@@ -631,7 +631,7 @@ function TripTravel() {
                 <Stack gap={2}>
                   <Group gap="xs">
                     <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='return')?.title) || 'Return Travel'}</Text>
-                    <Badge size="sm" variant="light">{(segments.find(s => s.edge_type==='return')?.badge) || 'End'}</Badge>
+                    <Badge size="lg" variant="light">{(segments.find(s => s.edge_type==='return')?.badge) || 'End'}</Badge>
                   </Group>
                   <Text size="sm" c="dimmed">Trip end: {(segments.find(s => s.edge_type==='return')?.end_date) ?? (trip.end_date ?? 'TBD')}</Text>
           </Stack>

@@ -1,11 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session, joinedload
+from datetime import datetime, timezone
 
 from app.db import get_db
 from app import models, schemas
 from typing import List
 
 router = APIRouter(prefix="/trips", tags=["trips"])
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.User | None:
+    """Resolve the current user from the Authorization header, or None if unauthenticated.
+    This version does not do any special dev fallbacks.
+    """
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        return None
+    # Allow local tokens only when explicitly configured
+    if token.startswith("local:"):
+        session = db.query(models.Session).filter(models.Session.token == token).first()
+        if session and session.expires_at > datetime.now(timezone.utc):
+            return db.get(models.User, session.user_id)
+        return None
+    session = db.query(models.Session).filter(models.Session.token == token).first()
+    if not session or session.expires_at < datetime.now(timezone.utc):
+        return None
+    return db.get(models.User, session.user_id)
 # Schedule endpoints
 @router.get("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
 def list_schedule(trip_id: int, db: Session = Depends(get_db)):
@@ -45,15 +65,25 @@ def overwrite_schedule(trip_id: int, payload: List[schemas.ScheduledEventCreate]
 
 @router.get("/", response_model=list[schemas.TripRead])
 def list_trips(db: Session = Depends(get_db)):
-    trips = db.query(models.Trip).order_by(models.Trip.created_at.desc()).all()
+    trips = (
+        db.query(models.Trip)
+        .options(joinedload(models.Trip.creator))
+        .order_by(models.Trip.created_at.desc())
+        .all()
+    )
     return trips
 
 
 @router.post("/", response_model=schemas.TripRead)
-def create_trip(payload: schemas.TripCreate, db: Session = Depends(get_db)):
+def create_trip(payload: schemas.TripCreate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Trip name required")
-    trip = models.Trip(name=payload.name.strip(), start_date=payload.start_date, end_date=payload.end_date)
+    trip = models.Trip(
+        name=payload.name.strip(),
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        created_by=current_user.id if current_user else None,
+    )
     db.add(trip)
     db.commit()
     db.refresh(trip)

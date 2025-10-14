@@ -106,7 +106,7 @@ export type TripLeg = { id: number; name: string; start_date?: string | null; en
 export type TripLegCreate = { name: string; start_date?: string | null; end_date?: string | null; order_index?: number }
 export type TripLegUpdate = { name?: string; start_date?: string | null; end_date?: string | null; order_index?: number }
 
-export type Trip = { id: number; name: string; start_date?: string | null; end_date?: string | null; legs?: TripLeg[] }
+export type Trip = { id: number; name: string; start_date?: string | null; end_date?: string | null; legs?: TripLeg[]; created_by?: number | null; creator?: { id: number; email: string; name: string; picture: string } | null }
 export type TripCreate = { name: string; start_date?: string | null; end_date?: string | null }
 
 export async function listTrips(): Promise<Trip[]> {
