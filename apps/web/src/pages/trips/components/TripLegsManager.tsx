@@ -22,7 +22,7 @@ import {
   deleteTripLeg, 
   type TripLeg, 
   type TripLegCreate 
-} from '../api/client'
+} from '../../../api/client'
 
 interface TripLegsManagerProps {
   tripId: number
@@ -57,7 +57,8 @@ function TripLegsManager({ tripId, tripName, onStarChange }: TripLegsManagerProp
     if (v instanceof Date) return v
     if (typeof v === 'string') {
       const isoLocal = /^\d{4}-\d{2}-\d{2}$/
-      if (isoLocal.test(v)) {
+      if (isoLocal.test(v))
+      {
         const [y, m, d] = v.split('-').map(Number)
         return new Date(y, m - 1, d)
       }
@@ -349,3 +350,5 @@ function TripLegsManager({ tripId, tripName, onStarChange }: TripLegsManagerProp
 }
 
 export default TripLegsManager
+
+

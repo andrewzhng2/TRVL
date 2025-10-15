@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createTrip, listTrips, updateTrip, deleteTrip, type Trip } from '../../api/client'
 import { generateTripSlug } from '../../utils/tripUtils'
-import TripLegsManager from '../../components/TripLegsManager'
-import TripMap from '../../components/TripMap'
+import TripLegsManager from './components/TripLegsManager'
+import TripMap from './components/TripMap'
 
 function TripsPage() {
   function coerceDate(v: unknown): Date | null {

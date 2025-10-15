@@ -371,7 +371,7 @@ function TripTravel() {
                         </Group>
                         <Text size="sm" c="dimmed">
                           {(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.start_date) ?? (leg.start_date ?? 'Start')} → {(segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)?.end_date) ?? (leg.end_date ?? 'End')}
-          </Text>
+                        </Text>
                       </Stack>
                     </Group>
                     <Group gap="xs">
@@ -389,7 +389,7 @@ function TripTravel() {
                         })
                         openEdit()
                       }}>
-                              <IconPencil size={36} />
+                        <IconPencil size={36} />
                       </ActionIcon>
                       <ActionIcon aria-label="Delete" variant="subtle" color="red" onClick={async () => {
                         const seg = segments.find(s => s.edge_type==='leg' && s.from_leg_id===leg.id)
@@ -401,7 +401,7 @@ function TripTravel() {
                           console.error('Failed to delete leg segment', e)
                         }
                       }}>
-                              <IconTrash size={36} />
+                        <IconTrash size={36} />
                       </ActionIcon>
                     </Group>
                   </Group>
@@ -438,9 +438,9 @@ function TripTravel() {
                               <Text fw={500} style={{ fontSize: '2rem' }}>{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.title) || 'Between'}</Text>
                               <Badge size="lg" variant="light">{(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.badge) || `${leg.name} → ${next.name}`}</Badge>
                             </Group>
-          <Text size="sm" c="dimmed">
+                            <Text size="sm" c="dimmed">
                               {(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.start_date) ?? (leg.end_date ?? 'End')} → {(segments.find(s => s.edge_type==='between' && s.from_leg_id===leg.id && s.to_leg_id===next.id)?.end_date) ?? (next.start_date ?? 'Start')}
-          </Text>
+                            </Text>
                           </Stack>
                         </Group>
                         <Group gap="xs">
@@ -838,3 +838,5 @@ function TripTravel() {
 }
 
 export default TripTravel
+
+

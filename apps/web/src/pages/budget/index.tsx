@@ -253,6 +253,7 @@ function PersonBudgetColumn({
             <td colSpan={2}>
               <Paper withBorder radius="sm" p="sm" style={{ backgroundColor: '#FFFFFF' }}>
                 <Stack gap="sm">
+                  <Text fw={700}>Expenses</Text>
                   {person.items.length === 0 ? (
                     <div style={{ color: 'var(--mantine-color-dimmed)' }}>No expenses yet. Use the field below to add items.</div>
                   ) : (
@@ -323,6 +324,5 @@ function PersonBudgetColumn({
     </Paper>
   )
 }
-
 
 

@@ -6,12 +6,12 @@ import Login from './pages/login'
 import { fetchMe, logout as apiLogout, type SessionRead } from './api/client'
 import Trips from './pages/trips'
 import Navigation from './components/Navigation'
-import TripMain from './pages/trip/TripMain'
-import TripBacklog from './pages/trip/TripBacklog'
-import TripSchedule from './pages/trip/TripSchedule'
-import TripTravel from './pages/trip/TripTravel'
-import TripPacking from './pages/trip/TripPacking'
-import TripBudget from './pages/trip/TripBudget'
+import TripMain from './pages/overview'
+import TripBacklog from './pages/backlog'
+import TripSchedule from './pages/schedule'
+import TripTravel from './pages/travel'
+import TripPacking from './pages/packing'
+import TripBudget from './pages/budget'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2)
