@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from app.db import get_db
 from app import models, schemas
 from typing import List
+import secrets
 
 router = APIRouter(prefix="/trips", tags=["trips"])
 
@@ -83,6 +84,7 @@ def create_trip(payload: schemas.TripCreate, db: Session = Depends(get_db), curr
         start_date=payload.start_date,
         end_date=payload.end_date,
         created_by=current_user.id if current_user else None,
+        invite_code=secrets.token_urlsafe(12),
     )
     db.add(trip)
     db.commit()
@@ -90,6 +92,9 @@ def create_trip(payload: schemas.TripCreate, db: Session = Depends(get_db), curr
     # Seed sections
     for kind in ("backlog", "schedule", "travel", "packing"):
         db.add(models.TripSection(trip_id=trip.id, kind=kind))
+    # If creator exists, add them as a member
+    if current_user:
+        db.add(models.TripUser(trip_id=trip.id, user_id=current_user.id))
     db.commit()
     return trip
 
@@ -280,4 +285,82 @@ def delete_travel_segment(trip_id: int, segment_id: int, db: Session = Depends(g
     db.delete(seg)
     db.commit()
     return {"message": "Travel segment deleted successfully"}
+
+
+# --- Invite & Membership endpoints ---
+
+def _require_member(db: Session, trip_id: int, user: models.User | None) -> models.Trip:
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    is_member = (
+        db.query(models.TripUser)
+        .filter(models.TripUser.trip_id == trip_id, models.TripUser.user_id == user.id)
+        .count()
+        > 0
+    )
+    if not is_member and trip.created_by != user.id:
+        raise HTTPException(status_code=403, detail="Members only")
+    return trip
+
+
+@router.get("/{trip_id}/invite", response_model=schemas.InviteCodeRead)
+def get_invite_code(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    trip = _require_member(db, trip_id, current_user)
+    return schemas.InviteCodeRead(code=trip.invite_code)
+
+
+@router.post("/{trip_id}/invite/rotate", response_model=schemas.InviteCodeRead)
+def rotate_invite_code(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    trip = _require_member(db, trip_id, current_user)
+    trip.invite_code = secrets.token_urlsafe(12)
+    db.add(trip)
+    db.commit()
+    db.refresh(trip)
+    return schemas.InviteCodeRead(code=trip.invite_code)
+
+
+@router.post("/{trip_id}/join", response_model=schemas.TripRead)
+def join_trip(trip_id: int, request: Request, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    trip = db.get(models.Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    code = request.query_params.get("code", "")
+    if not code or code != (trip.invite_code or ""):
+        raise HTTPException(status_code=403, detail="Invalid invite code")
+    # Idempotent add
+    exists = (
+        db.query(models.TripUser)
+        .filter(models.TripUser.trip_id == trip_id, models.TripUser.user_id == current_user.id)
+        .count()
+        > 0
+    )
+    if not exists:
+        db.add(models.TripUser(trip_id=trip_id, user_id=current_user.id))
+        db.commit()
+    # Return trip with creator joinedload
+    trip = (
+        db.query(models.Trip)
+        .options(joinedload(models.Trip.creator))
+        .filter(models.Trip.id == trip_id)
+        .first()
+    )
+    return trip
+
+
+@router.get("/{trip_id}/members", response_model=List[schemas.UserRead])
+def list_members(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    trip = _require_member(db, trip_id, current_user)
+    # Fetch users by join
+    rows = (
+        db.query(models.User)
+        .join(models.TripUser, models.TripUser.user_id == models.User.id)
+        .filter(models.TripUser.trip_id == trip.id)
+        .all()
+    )
+    return rows
 

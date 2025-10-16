@@ -62,10 +62,12 @@ class Trip(Base):
     end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    invite_code: Mapped[str] = mapped_column(String(64), nullable=False, default="")
 
     sections: Mapped[list["TripSection"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     legs: Mapped[list["TripLeg"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     travel_segments: Mapped[list["TravelSegment"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
+    memberships: Mapped[list["TripUser"]] = relationship(back_populates="trip", cascade="all, delete-orphan")
     creator: Mapped["User | None"] = relationship("User")
 
 
@@ -130,3 +132,18 @@ class TravelSegment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
     trip: Mapped[Trip] = relationship(back_populates="travel_segments")
+
+
+class TripUser(Base):
+    __tablename__ = "trip_users"
+    __table_args__ = (
+        UniqueConstraint("trip_id", "user_id", name="uq_trip_user"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    trip: Mapped[Trip] = relationship(back_populates="memberships")
+    user: Mapped["User"] = relationship()

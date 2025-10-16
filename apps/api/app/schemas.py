@@ -171,3 +171,7 @@ class ScheduledEventRead(ScheduledEventBase):
   class Config:
     from_attributes = True
 
+
+class InviteCodeRead(BaseModel):
+  code: str
+

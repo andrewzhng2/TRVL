@@ -1,11 +1,12 @@
 import { ActionIcon, Button, Card, Group, Modal, Stack, Text, TextInput, Title } from '@mantine/core'
 import '@mantine/core/styles.css';
 import { DateInput } from '@mantine/dates'
-import { IconMapPin, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconMapPin, IconPencil, IconPlus, IconTrash, IconUserPlus } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createTrip, listTrips, updateTrip, deleteTrip, type Trip } from '../../api/client'
+import { createTrip, listTrips, updateTrip, deleteTrip, type Trip, getTripInviteCode } from '../../api/client'
+import { notifications } from '@mantine/notifications'
 import { generateTripSlug } from '../../utils/tripUtils'
 import TripLegsManager from './components/TripLegsManager'
 import TripMap from './components/TripMap'
@@ -158,6 +159,25 @@ function TripsPage() {
                 <Title order={4} c="white">{trip.name || 'Untitled trip'}</Title>
                 <ActionIcon variant="white" onClick={() => openEditTrip(trip)} aria-label="Edit Trip">
                   <IconPencil size={16} />
+                </ActionIcon>
+                <ActionIcon 
+                  variant="white" 
+                  aria-label="Invite to Trip"
+                  onClick={async () => {
+                    try {
+                      const { code } = await getTripInviteCode(trip.id)
+                      const url = `${window.location.origin}/invite/${trip.id}/${code}`
+                      await navigator.clipboard.writeText(url)
+                      notifications.show({
+                        title: 'Invite link copied',
+                        message: 'Share it with friends to join this trip',
+                      })
+                    } catch (e) {
+                      notifications.show({ color: 'red', title: 'Failed to get invite', message: (e as Error).message || 'Error fetching invite code' })
+                    }
+                  }}
+                >
+                  <IconUserPlus size={16} />
                 </ActionIcon>
               </Group>
               <Text size="sm" c="white">

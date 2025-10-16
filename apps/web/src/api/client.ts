@@ -244,4 +244,23 @@ export async function saveSchedule(tripId: number, items: Omit<ScheduledEvent, '
   return res.json()
 }
 
+// Invites & Membership
+export async function getTripInviteCode(tripId: number): Promise<{ code: string }> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/invite`, { headers: getAuthHeaders() })
+  if (!res.ok) throw new Error('Failed to fetch invite code')
+  return res.json()
+}
+
+export async function rotateTripInviteCode(tripId: number): Promise<{ code: string }> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/invite/rotate`, { method: 'POST', headers: getAuthHeaders() })
+  if (!res.ok) throw new Error('Failed to rotate invite code')
+  return res.json()
+}
+
+export async function joinTripByInvite(tripId: number, code: string): Promise<Trip> {
+  const res = await fetch(`${API_BASE}/trips/${tripId}/join?code=${encodeURIComponent(code)}`, { method: 'POST', headers: getAuthHeaders() })
+  if (!res.ok) throw new Error('Failed to join trip')
+  return res.json()
+}
+
 

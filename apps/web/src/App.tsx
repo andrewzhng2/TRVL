@@ -1,12 +1,13 @@
-import { AppShell, Avatar, Group, Image, Menu, Stack, Text, Title } from '@mantine/core'
+import { AppShell, Avatar, Group, Menu, Text, Title } from '@mantine/core'
 import './App.css'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Login from './pages/login'
 import { fetchMe, logout as apiLogout, type SessionRead } from './api/client'
 import Trips from './pages/trips'
 import Navigation from './components/Navigation'
 import TripMain from './pages/overview'
+import InviteJoin from './pages/invite'
 import TripBacklog from './pages/backlog'
 import TripSchedule from './pages/schedule'
 import TripTravel from './pages/travel'
@@ -44,7 +45,8 @@ function useSession() {
   return { session, setSession }
 }
 
-function RequireAuth({ children }: { children: JSX.Element }) {
+type RequireAuthProps = { children: React.ReactElement }
+function RequireAuth({ children }: RequireAuthProps) {
   const raw = localStorage.getItem('trvl_session')
   if (!raw) return <Navigate to="/login" replace />
   return children
@@ -71,6 +73,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/trips" replace />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/invite/:tripId/:code" element={<RequireAuth><InviteJoin /></RequireAuth>} />
           <Route path="/trips" element={<RequireAuth><Trips /></RequireAuth>} />
           <Route path="/:tripSlug" element={<RequireAuth><TripMain /></RequireAuth>} />
           <Route path="/:tripSlug/backlog" element={<RequireAuth><TripBacklog /></RequireAuth>} />
