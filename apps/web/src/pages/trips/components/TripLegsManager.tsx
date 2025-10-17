@@ -352,3 +352,4 @@ function TripLegsManager({ tripId, tripName, onStarChange }: TripLegsManagerProp
 export default TripLegsManager
 
 
+

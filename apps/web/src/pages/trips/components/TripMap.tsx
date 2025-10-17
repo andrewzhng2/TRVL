@@ -19,3 +19,4 @@ export default function TripMap({ city, height = 300 }: TripMapProps) {
 }
 
 
+

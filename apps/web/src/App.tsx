@@ -10,6 +10,7 @@ import TripMain from './pages/overview'
 import InviteJoin from './pages/invite'
 import TripBacklog from './pages/backlog'
 import TripSchedule from './pages/schedule'
+import TripItinerary from './pages/itinerary'
 import TripTravel from './pages/travel'
 import TripPacking from './pages/packing'
 import TripBudget from './pages/budget'
@@ -78,6 +79,7 @@ function App() {
           <Route path="/:tripSlug" element={<RequireAuth><TripMain /></RequireAuth>} />
           <Route path="/:tripSlug/backlog" element={<RequireAuth><TripBacklog /></RequireAuth>} />
           <Route path="/:tripSlug/schedule" element={<RequireAuth><TripSchedule /></RequireAuth>} />
+          <Route path="/:tripSlug/itinerary" element={<RequireAuth><TripItinerary /></RequireAuth>} />
           <Route path="/:tripSlug/travel" element={<RequireAuth><TripTravel /></RequireAuth>} />
           <Route path="/:tripSlug/packing" element={<RequireAuth><TripPacking /></RequireAuth>} />
           <Route path="/:tripSlug/budget" element={<RequireAuth><TripBudget /></RequireAuth>} />
