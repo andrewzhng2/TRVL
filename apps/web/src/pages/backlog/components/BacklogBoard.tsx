@@ -235,7 +235,6 @@ function BacklogBoard() {
                     </Group>
                     <Text size="sm">Location: {card.location || '—'}</Text>
                     <Group gap={8}>
-                      <Text size="sm">Distance: {card.distanceFromHotelKm ?? '—'} km</Text>
                       <Text size="sm">Cost: {typeof card.cost === 'number' ? `$${card.cost}` : '—'}</Text>
                     </Group>
                     <Group gap={8}>
@@ -388,10 +387,6 @@ function BacklogBoard() {
             <Stack gap={4}>
               <Title order={5}>Location</Title>
               <Text>{viewingCard.card.location || '—'}</Text>
-            </Stack>
-            <Stack gap={4}>
-              <Title order={5}>Distance</Title>
-              <Text>{viewingCard.card.distanceFromHotelKm != null ? `${viewingCard.card.distanceFromHotelKm} km` : '—'}</Text>
             </Stack>
             <Stack gap={4}>
               <Title order={5}>Cost</Title>

@@ -12,3 +12,9 @@ html, body, #root {
 body {
   margin: 0;
 }
+
+/* Tighten Google Maps InfoWindow top padding to avoid extra white gap */
+.gm-style .gm-style-iw,
+.gm-style .gm-style-iw-d {
+  padding-top: 6px !important;
+}

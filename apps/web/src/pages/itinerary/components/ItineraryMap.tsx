@@ -46,6 +46,55 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;')
 }
 
+function buildInfoHtml(label: string, title: string, photoUrl?: string): string {
+  const image = photoUrl
+    ? `<div style="margin-top:8px"><img src="${photoUrl}" alt="${title}" style="width:200px;height:200px;object-fit:cover;border-radius:8px;display:block" /></div>`
+    : ''
+  return (
+    `<div style="min-width:240px;padding-right:24px;margin:0;line-height:1.2;white-space:normal;overflow-wrap:anywhere">` +
+      `<div style="display:flex;align-items:center;gap:8px">` +
+        `<span style="background:#2E6CF6;color:#fff;border-radius:12px;padding:2px 8px;font-weight:700;">${label}</span>` +
+        `<span style="font-weight:600">${title}</span>` +
+      `</div>` +
+      image +
+    `</div>`
+  )
+}
+
+function getPhotoCacheKey(query: string, coord?: google.maps.LatLngLiteral): string {
+  const lat = coord ? `|lat:${coord.lat.toFixed(4)}` : ''
+  const lng = coord ? `|lng:${coord.lng.toFixed(4)}` : ''
+  return `placephoto:v1:${query.trim().toLowerCase()}${lat}${lng}`
+}
+
+async function fetchFirstPlacePhotoUrl(
+  places: google.maps.places.PlacesService,
+  query: string,
+  coord?: google.maps.LatLngLiteral,
+): Promise<string | null> {
+  const key = getPhotoCacheKey(query, coord)
+  try {
+    const cached = localStorage.getItem(key)
+    if (cached) return cached
+  } catch { /* ignore */ }
+  return new Promise<string | null>((resolve) => {
+    const request: google.maps.places.FindPlaceFromQueryRequest = {
+      query,
+      fields: ['photos', 'name', 'place_id', 'geometry'],
+    }
+    if (coord) request.locationBias = new google.maps.LatLng(coord.lat, coord.lng)
+    places.findPlaceFromQuery(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0] && results[0].photos && results[0].photos.length > 0) {
+        const url = results[0].photos[0].getUrl({ maxWidth: 220, maxHeight: 220 })
+        try { localStorage.setItem(key, url) } catch { /* ignore */ }
+        resolve(url)
+      } else {
+        resolve(null)
+      }
+    })
+  })
+}
+
 export default function ItineraryMap({ stops, geocodeContext }: { stops: ItineraryStop[]; geocodeContext?: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
 
@@ -65,15 +114,30 @@ export default function ItineraryMap({ stops, geocodeContext }: { stops: Itinera
         let label = 1
         const coords: google.maps.LatLngLiteral[] = []
         const info = new google.maps.InfoWindow()
+        const places = (google.maps as unknown as { places?: unknown }).places
+          ? new google.maps.places.PlacesService(map)
+          : null
         for (const stop of stops) {
           if (!stop.location || !stop.location.trim()) continue
           const coord = await geocodeCached(geocoder, stop.location, geocodeContext)
           if (!coord) continue
           const marker = new google.maps.Marker({ position: coord, label: String(label++), title: stop.title })
-          marker.addListener('click', () => {
+          marker.addListener('click', async () => {
             const safe = escapeHtml(stop.title)
-            info.setContent(`<div style="min-width:160px;margin:-4px 0 0 0;white-space:nowrap;font-weight:600">${marker.getLabel()}. ${safe}</div>`)
+            const labelText = String(marker.getLabel() ?? '')
+            // show title immediately
+            info.setContent(buildInfoHtml(labelText, safe))
             info.open({ map, anchor: marker })
+            // then try to fetch a place photo
+            if (places) {
+              const parts = [stop.title, stop.location, geocodeContext].filter(Boolean) as string[]
+              const q = parts.join(', ')
+              const photoUrl = await fetchFirstPlacePhotoUrl(places, q, coord)
+              if (photoUrl) {
+                info.setContent(buildInfoHtml(labelText, safe, photoUrl))
+                info.open({ map, anchor: marker })
+              }
+            }
           })
           markers.push(marker)
           coords.push(coord)
