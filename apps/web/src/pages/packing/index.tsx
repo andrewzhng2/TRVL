@@ -119,31 +119,41 @@ function TripPacking() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
-        <Title order={2}>Packing Lists - {trip.name}</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleAddPerson}>Add person</Button>
-      </Group>
+      <Card withBorder radius="md" p="lg" style={{ backgroundColor: '#FFFFFF' }}>
+        <Stack gap="sm">
+          <Group style={{ alignSelf: 'flex-start' }}>
+            <Button
+              size="xl"
+              leftSection={<IconPlus size={16} />}
+              onClick={handleAddPerson}
+              style={{ backgroundColor: '#2E6CF6', color: '#FFFFFF', fontWeight: 700, padding: '12px 24px' }}
+            >
+              Add Person
+            </Button>
+          </Group>
 
-      <Card
-        withBorder
-        radius="md"
-        p="lg"
-        style={{ width: '100%', minHeight: '100vh' }}
-      >
-        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-          {people.map(person => (
-            <div key={person.id} style={{ width: '25%', minWidth: 360, flex: '0 0 25%' }}>
-              <PersonColumn
-                person={person}
-                onChangeName={name => handleChangePersonName(person.id, name)}
-                onAddItem={text => handleAddItem(person.id, text)}
-                onToggleItem={(itemId, checked) => handleToggleItem(person.id, itemId, checked)}
-                onRemoveItem={itemId => handleRemoveItem(person.id, itemId)}
-                onRemovePerson={() => handleRemovePerson(person.id)}
-              />
+          <Card
+            withBorder
+            radius="md"
+            p="lg"
+            style={{ width: '100%', minHeight: '100vh' }}
+          >
+            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+              {people.map(person => (
+                <div key={person.id} style={{ width: '25%', minWidth: 360, flex: '0 0 25%' }}>
+                  <PersonColumn
+                    person={person}
+                    onChangeName={name => handleChangePersonName(person.id, name)}
+                    onAddItem={text => handleAddItem(person.id, text)}
+                    onToggleItem={(itemId, checked) => handleToggleItem(person.id, itemId, checked)}
+                    onRemoveItem={itemId => handleRemoveItem(person.id, itemId)}
+                    onRemovePerson={() => handleRemovePerson(person.id)}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </Card>
+        </Stack>
       </Card>
     </Stack>
   )

@@ -34,10 +34,16 @@ function EventsPanel({
   events,
   selected,
   onChangeCategory,
+  isDirty,
+  isSaving,
+  onSave,
 }: {
   events: EventLite[]
   selected: Category
   onChangeCategory: (c: Category) => void
+  isDirty: boolean
+  isSaving: boolean
+  onSave: () => void
 }) {
   const MAX_VISIBLE_CARDS = 10
   const CARD_MIN_HEIGHT = 56
@@ -85,16 +91,16 @@ function EventsPanel({
                   }
                 }}
                 onDragEnd={() => undefined}
-                style={{ cursor: 'grab', minHeight: CARD_MIN_HEIGHT }}
+                style={{ cursor: 'grab', minHeight: CARD_MIN_HEIGHT, width: '100%', minWidth: 0, overflow: 'hidden' }}
               >
-                <Group justify="space-between" align="center">
-                  <Text fw={600} size="sm" style={{ wordBreak: 'break-word' }}>
+                <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Text fw={600} size="sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
                     {ev.title || 'Untitled'}
                   </Text>
-                  <Text size="sm" c="dimmed">
+                  <Text size="xs" c="dimmed">
                     Desire: {typeof ev.desire === 'number' ? ev.desire.toFixed(1) : '—'}
                   </Text>
-                </Group>
+                </Box>
               </Paper>
             ))}
             {events.length === 0 && (
@@ -102,6 +108,11 @@ function EventsPanel({
             )}
           </Stack>
         </ScrollArea.Autosize>
+        <Box style={{ marginTop: 'auto', borderTop: '1px solid #000000', paddingTop: 8 }}>
+          <Button fullWidth variant="filled" color="blue" disabled={!isDirty || isSaving} onClick={onSave}>
+            {isSaving ? 'Saving…' : 'SAVE CHANGES'}
+          </Button>
+        </Box>
       </Stack>
     </Paper>
   )
@@ -146,11 +157,11 @@ function ScheduleEventCard({
       }}
       style={{ height: '100%' }}
     >
-      <Paper withBorder p="xs" radius={0} style={{ height: '100%', display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'grab', position: 'relative' }}>
-        <Group justify="space-between" align="center" style={{ width: '100%' }}>
-          <Text size="sm" fw={600} style={{ wordBreak: 'break-word' }}>{event.title}</Text>
-          <Text size="sm" c="dimmed">Desire: {typeof event.desire === 'number' ? event.desire.toFixed(1) : '—'}</Text>
-        </Group>
+      <Paper withBorder p="xs" radius={0} style={{ height: '100%', width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', alignItems: 'flex-start', overflow: 'hidden', cursor: 'grab', position: 'relative' }}>
+        <Box style={{ width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', maxWidth: '100%' }}>{event.title}</Text>
+          <Text size="xs" c="dimmed">Desire: {typeof event.desire === 'number' ? event.desire.toFixed(1) : '—'}</Text>
+        </Box>
         <ActionIcon
           variant="filled"
           color="red"
@@ -395,6 +406,8 @@ function WeekBody({
                   }}
                   style={{
                     height: SLOT_HEIGHT_PX,
+                    minWidth: 0,
+                    overflow: 'hidden',
                     borderBottom: '1px solid var(--mantine-color-gray-2)',
                     borderRight: '1px solid var(--mantine-color-gray-2)',
                     backgroundColor: 'white',
@@ -609,6 +622,9 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
           events={visibleEvents}
           selected={category}
           onChangeCategory={setCategory}
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={handleSaveAll}
         />
         <Paper withBorder p="sm" radius="md" style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: '#1D2F6F' }}>
           <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
@@ -632,11 +648,7 @@ function ScheduleBoard({ tripId }: { tripId?: number }) {
             />
           </Stack>
         </Paper>
-        <Box style={{ gridColumn: '3 / span 5', display: 'flex', justifyContent: 'flex-end', marginTop: 2, marginRight: 10}}>
-          <Button size="sm" variant="filled" color="blue" disabled={!isDirty || isSaving} onClick={handleSaveAll}>
-            {isSaving ? 'Saving…' : 'Save changes'}
-          </Button>
-        </Box>
+
       </SimpleGrid>
     </Box>
   )

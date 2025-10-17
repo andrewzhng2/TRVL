@@ -121,16 +121,6 @@ function TripMain() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
-        <Title order={2}>{trip.name}</Title>
-        <Badge color="blue" variant="light" size="xl">
-          {trip.start_date && trip.end_date 
-            ? `${trip.start_date} → ${trip.end_date}`
-            : 'No dates set'
-          }
-        </Badge>
-      </Group>
-
       <Card withBorder radius="md" p="lg" style={{ backgroundColor: '#1D2F6F' }}>
         <Stack gap="md">
           <Group justify="space-between" align="center">
@@ -144,7 +134,7 @@ function TripMain() {
                 textTransform: 'uppercase',
               }}
             >
-              Trip Overview
+              Trip Overview - {trip.name}
             </Text>
             {editing ? (
               <Group gap="xs">
@@ -161,6 +151,15 @@ function TripMain() {
               </ActionIcon>
             )}
           </Group>
+
+          <div style={{ alignSelf: 'flex-start' }}>
+            <Badge color="blue" variant="light" size="xl" style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}>
+              {trip.start_date && trip.end_date
+                ? `${trip.start_date} → ${trip.end_date}`
+                : 'No dates set'
+              }
+            </Badge>
+          </div>
 
           {editing ? (
             <Card withBorder radius="md" p="md">

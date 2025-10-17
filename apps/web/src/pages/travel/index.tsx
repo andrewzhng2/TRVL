@@ -12,7 +12,8 @@ import {
   IconWalk, 
   IconShip,
   IconPencil,
-  IconTrash
+  IconTrash,
+  IconPlus
 } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -158,19 +159,24 @@ function TripTravel() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
-        <Title order={2}>Travel - {trip.name}</Title>
-        <Button onClick={() => {
-          const sorted = [...legs].sort((a, b) => a.order_index - b.order_index)
-          const defaultKey = sorted.length === 0 ? 'null-null' : `${sorted[sorted.length-1].id}-null`
-          setAddTravelForm({ positionKey: defaultKey, transport: 'plane' })
-          setAddTravelError(null)
-          openAddTravel()
-        }}>Add Travel</Button>
-      </Group>
-
-      <Card withBorder radius="md" p="lg">
+      <Card withBorder radius="md" p="lg" style={{ backgroundColor: '#1D2F6F' }}>
         <Stack gap="sm">
+          <Group style={{ alignSelf: 'flex-start' }}>
+            <Button 
+              size="xl"
+              leftSection={<IconPlus size={16} />}
+              onClick={() => {
+              const sorted = [...legs].sort((a, b) => a.order_index - b.order_index)
+              const defaultKey = sorted.length === 0 ? 'null-null' : `${sorted[sorted.length-1].id}-null`
+              setAddTravelForm({ positionKey: defaultKey, transport: 'plane' })
+              setAddTravelError(null)
+              openAddTravel()
+            }}
+              style={{ backgroundColor: '#2E6CF6', color: '#FFFFFF', fontWeight: 700, padding: '12px 24px' }}
+            >
+              Add Travel
+            </Button>
+          </Group>
           <Card withBorder radius="md" p="xl">
             <Group justify="space-between" align="center">
               <Group align="center" gap="md">

@@ -107,33 +107,43 @@ function TripBudget() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center">
-        <Title order={2}>Budget / Expenses - {trip.name}</Title>
-        <Group>
-          <Text fw={600} c="white">Total: {formatCurrency(overallTotal)}</Text>
-          <Button leftSection={<IconPlus size={16} />} onClick={handleAddPerson}>Add person</Button>
-        </Group>
-      </Group>
+      <Card withBorder radius="md" p="lg" style={{ backgroundColor: '#FFFFFF' }}>
+        <Stack gap="sm">
+          <Group justify="space-between" align="center">
+            <Group style={{ alignSelf: 'flex-start' }}>
+              <Button
+                size="xl"
+                leftSection={<IconPlus size={16} />}
+                onClick={handleAddPerson}
+                style={{ backgroundColor: '#2E6CF6', color: '#FFFFFF', fontWeight: 700, padding: '12px 24px' }}
+              >
+                Add Person
+              </Button>
+            </Group>
+            <Text fw={700} style={{ fontSize: '1.5rem' }}>Total: {formatCurrency(overallTotal)}</Text>
+          </Group>
 
-      <Card
-        withBorder
-        radius="md"
-        p="lg"
-        style={{ width: '100%', minHeight: '100vh' }}
-      >
-        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-          {people.map(person => (
-            <div key={person.id} style={{ width: '25%', minWidth: 360, flex: '0 0 25%' }}>
-              <PersonBudgetColumn
-                person={person}
-                onChangeName={name => handleChangePersonName(person.id, name)}
-                onAddItem={(text, amount) => handleAddItem(person.id, text, amount)}
-                onRemoveItem={itemId => handleRemoveItem(person.id, itemId)}
-                onRemovePerson={() => handleRemovePerson(person.id)}
-              />
+          <Card
+            withBorder
+            radius="md"
+            p="lg"
+            style={{ width: '100%', minHeight: '100vh' }}
+          >
+            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+              {people.map(person => (
+                <div key={person.id} style={{ width: '25%', minWidth: 360, flex: '0 0 25%' }}>
+                  <PersonBudgetColumn
+                    person={person}
+                    onChangeName={name => handleChangePersonName(person.id, name)}
+                    onAddItem={(text, amount) => handleAddItem(person.id, text, amount)}
+                    onRemoveItem={itemId => handleRemoveItem(person.id, itemId)}
+                    onRemovePerson={() => handleRemovePerson(person.id)}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </Card>
+        </Stack>
       </Card>
     </Stack>
   )
