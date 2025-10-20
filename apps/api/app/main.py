@@ -12,6 +12,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://accounts.google.com",
+        "https://your-app.vercel.app",   # update after you deploy frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -21,6 +22,11 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# Example protected (service role) usage placeholder:
+@app.get("/api/example")
+def example():
+    return {"message": "Hello from FastAPI on Render!"}
 
 app.include_router(backlog.router)
 app.include_router(auth.router)
