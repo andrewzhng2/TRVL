@@ -48,8 +48,14 @@ function useSession() {
 
 type RequireAuthProps = { children: React.ReactElement }
 function RequireAuth({ children }: RequireAuthProps) {
+  const location = useLocation()
   const raw = localStorage.getItem('trvl_session')
-  if (!raw) return <Navigate to="/login" replace />
+  if (!raw) {
+    try {
+      sessionStorage.setItem('trvl_post_login_redirect', location.pathname + location.search + location.hash)
+    } catch {}
+    return <Navigate to="/login" replace />
+  }
   return children
 }
 

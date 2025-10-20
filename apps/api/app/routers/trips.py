@@ -27,49 +27,36 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.
     if not session or session.expires_at < datetime.now(timezone.utc):
         return None
     return db.get(models.User, session.user_id)
-# Schedule endpoints
-@router.get("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
-def list_schedule(trip_id: int, db: Session = Depends(get_db)):
+
+
+def _require_member(db: Session, trip_id: int, user: models.User | None) -> models.Trip:
     trip = db.get(models.Trip, trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    items = (
-        db.query(models.ScheduledEvent)
-        .filter(models.ScheduledEvent.trip_id == trip_id)
-        .all()
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    is_member = (
+        db.query(models.TripUser)
+        .filter(models.TripUser.trip_id == trip_id, models.TripUser.user_id == user.id)
+        .count()
+        > 0
     )
-    return items
-
-
-@router.post("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
-def overwrite_schedule(trip_id: int, payload: List[schemas.ScheduledEventCreate], db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    # Clear and replace atomically
-    db.query(models.ScheduledEvent).filter(models.ScheduledEvent.trip_id == trip_id).delete()
-    for item in payload:
-        db.add(models.ScheduledEvent(
-            trip_id=trip_id,
-            card_id=item.card_id,
-            day_index=item.day_index,
-            hour=item.hour,
-        ))
-    db.commit()
-    items = (
-        db.query(models.ScheduledEvent)
-        .filter(models.ScheduledEvent.trip_id == trip_id)
-        .all()
-    )
-    return items
+    if not is_member and trip.created_by != user.id:
+        raise HTTPException(status_code=403, detail="Members only")
+    return trip
 
 
 @router.get("/", response_model=list[schemas.TripRead])
-def list_trips(db: Session = Depends(get_db)):
+def list_trips(db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     trips = (
         db.query(models.Trip)
         .options(joinedload(models.Trip.creator))
+        .outerjoin(models.TripUser, models.TripUser.trip_id == models.Trip.id)
+        .filter((models.Trip.created_by == current_user.id) | (models.TripUser.user_id == current_user.id))
         .order_by(models.Trip.created_at.desc())
+        .distinct()
         .all()
     )
     return trips
@@ -100,7 +87,8 @@ def create_trip(payload: schemas.TripCreate, db: Session = Depends(get_db), curr
 
 
 @router.patch("/{trip_id}", response_model=schemas.TripRead)
-def update_trip(trip_id: int, payload: schemas.TripUpdate, db: Session = Depends(get_db)):
+def update_trip(trip_id: int, payload: schemas.TripUpdate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     trip = db.get(models.Trip, trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -119,7 +107,8 @@ def update_trip(trip_id: int, payload: schemas.TripUpdate, db: Session = Depends
 
 
 @router.delete("/{trip_id}")
-def delete_trip(trip_id: int, db: Session = Depends(get_db)):
+def delete_trip(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     trip = db.get(models.Trip, trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -130,19 +119,15 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
 
 # Trip Legs endpoints
 @router.get("/{trip_id}/legs", response_model=list[schemas.TripLegRead])
-def list_trip_legs(trip_id: int, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def list_trip_legs(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     legs = db.query(models.TripLeg).filter(models.TripLeg.trip_id == trip_id).order_by(models.TripLeg.order_index).all()
     return legs
 
 
 @router.post("/{trip_id}/legs", response_model=schemas.TripLegRead)
-def create_trip_leg(trip_id: int, payload: schemas.TripLegCreate, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def create_trip_leg(trip_id: int, payload: schemas.TripLegCreate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Leg name required")
     
@@ -163,11 +148,8 @@ def create_trip_leg(trip_id: int, payload: schemas.TripLegCreate, db: Session = 
 
 
 @router.patch("/{trip_id}/legs/{leg_id}", response_model=schemas.TripLegRead)
-def update_trip_leg(trip_id: int, leg_id: int, payload: schemas.TripLegUpdate, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    
+def update_trip_leg(trip_id: int, leg_id: int, payload: schemas.TripLegUpdate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     leg = db.get(models.TripLeg, leg_id)
     if not leg or leg.trip_id != trip_id:
         raise HTTPException(status_code=404, detail="Trip leg not found")
@@ -190,11 +172,8 @@ def update_trip_leg(trip_id: int, leg_id: int, payload: schemas.TripLegUpdate, d
 
 
 @router.delete("/{trip_id}/legs/{leg_id}")
-def delete_trip_leg(trip_id: int, leg_id: int, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    
+def delete_trip_leg(trip_id: int, leg_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     leg = db.get(models.TripLeg, leg_id)
     if not leg or leg.trip_id != trip_id:
         raise HTTPException(status_code=404, detail="Trip leg not found")
@@ -206,10 +185,8 @@ def delete_trip_leg(trip_id: int, leg_id: int, db: Session = Depends(get_db)):
 
 # Travel Segments endpoints
 @router.get("/{trip_id}/travel", response_model=list[schemas.TravelSegmentRead])
-def list_travel_segments(trip_id: int, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def list_travel_segments(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     items = (
         db.query(models.TravelSegment)
         .filter(models.TravelSegment.trip_id == trip_id)
@@ -220,10 +197,8 @@ def list_travel_segments(trip_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{trip_id}/travel", response_model=schemas.TravelSegmentRead)
-def create_travel_segment(trip_id: int, payload: schemas.TravelSegmentCreate, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def create_travel_segment(trip_id: int, payload: schemas.TravelSegmentCreate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     seg = models.TravelSegment(
         trip_id=trip_id,
         edge_type=payload.edge_type,
@@ -243,10 +218,8 @@ def create_travel_segment(trip_id: int, payload: schemas.TravelSegmentCreate, db
 
 
 @router.patch("/{trip_id}/travel/{segment_id}", response_model=schemas.TravelSegmentRead)
-def update_travel_segment(trip_id: int, segment_id: int, payload: schemas.TravelSegmentUpdate, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def update_travel_segment(trip_id: int, segment_id: int, payload: schemas.TravelSegmentUpdate, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     seg = db.get(models.TravelSegment, segment_id)
     if not seg or seg.trip_id != trip_id:
         raise HTTPException(status_code=404, detail="Travel segment not found")
@@ -275,10 +248,8 @@ def update_travel_segment(trip_id: int, segment_id: int, payload: schemas.Travel
 
 
 @router.delete("/{trip_id}/travel/{segment_id}")
-def delete_travel_segment(trip_id: int, segment_id: int, db: Session = Depends(get_db)):
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+def delete_travel_segment(trip_id: int, segment_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
     seg = db.get(models.TravelSegment, segment_id)
     if not seg or seg.trip_id != trip_id:
         raise HTTPException(status_code=404, detail="Travel segment not found")
@@ -288,23 +259,6 @@ def delete_travel_segment(trip_id: int, segment_id: int, db: Session = Depends(g
 
 
 # --- Invite & Membership endpoints ---
-
-def _require_member(db: Session, trip_id: int, user: models.User | None) -> models.Trip:
-    trip = db.get(models.Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    if not user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    is_member = (
-        db.query(models.TripUser)
-        .filter(models.TripUser.trip_id == trip_id, models.TripUser.user_id == user.id)
-        .count()
-        > 0
-    )
-    if not is_member and trip.created_by != user.id:
-        raise HTTPException(status_code=403, detail="Members only")
-    return trip
-
 
 @router.get("/{trip_id}/invite", response_model=schemas.InviteCodeRead)
 def get_invite_code(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
@@ -363,4 +317,37 @@ def list_members(trip_id: int, db: Session = Depends(get_db), current_user: mode
         .all()
     )
     return rows
+
+
+# Schedule endpoints
+@router.get("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
+def list_schedule(trip_id: int, db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
+    items = (
+        db.query(models.ScheduledEvent)
+        .filter(models.ScheduledEvent.trip_id == trip_id)
+        .all()
+    )
+    return items
+
+
+@router.post("/{trip_id}/schedule", response_model=List[schemas.ScheduledEventRead])
+def overwrite_schedule(trip_id: int, payload: List[schemas.ScheduledEventCreate], db: Session = Depends(get_db), current_user: models.User | None = Depends(get_current_user)):
+    _require_member(db, trip_id, current_user)
+    # Clear and replace atomically
+    db.query(models.ScheduledEvent).filter(models.ScheduledEvent.trip_id == trip_id).delete()
+    for item in payload:
+        db.add(models.ScheduledEvent(
+            trip_id=trip_id,
+            card_id=item.card_id,
+            day_index=item.day_index,
+            hour=item.hour,
+        ))
+    db.commit()
+    items = (
+        db.query(models.ScheduledEvent)
+        .filter(models.ScheduledEvent.trip_id == trip_id)
+        .all()
+    )
+    return items
 

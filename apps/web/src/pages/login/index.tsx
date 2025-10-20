@@ -11,6 +11,7 @@ function LoginPage() {
     console.log('[AuthDebug] location.hash =', window.location.hash)
     const params = new URLSearchParams(hash)
     const idToken = params.get('id_token')
+    const postLogin = sessionStorage.getItem('trvl_post_login_redirect') || '/trips'
     if (idToken) {
       ;(async () => {
         try {
@@ -18,7 +19,8 @@ function LoginPage() {
           localStorage.setItem('trvl_session', JSON.stringify(session))
           // Clean the hash and redirect
           history.replaceState(null, '', window.location.pathname + window.location.search)
-          window.location.replace('/trips')
+          sessionStorage.removeItem('trvl_post_login_redirect')
+          window.location.replace(postLogin)
         } catch (e) {
           console.error('Google login failed', e)
           setError((e as Error).message || 'Login failed')
@@ -30,7 +32,9 @@ function LoginPage() {
     // If already logged in (without id_token), leave login page
     const existing = localStorage.getItem('trvl_session')
     if (existing) {
-      window.location.replace('/trips')
+      const dest = sessionStorage.getItem('trvl_post_login_redirect') || '/trips'
+      sessionStorage.removeItem('trvl_post_login_redirect')
+      window.location.replace(dest)
       return
     }
   }, [])

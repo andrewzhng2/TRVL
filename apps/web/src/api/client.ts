@@ -110,7 +110,7 @@ export type Trip = { id: number; name: string; start_date?: string | null; end_d
 export type TripCreate = { name: string; start_date?: string | null; end_date?: string | null }
 
 export async function listTrips(): Promise<Trip[]> {
-  const res = await fetch(`${API_BASE}/trips/`)
+  const res = await fetch(`${API_BASE}/trips/`, { headers: getAuthHeaders() })
   if (!res.ok) throw new Error('Failed to list trips')
   return res.json()
 }
@@ -118,7 +118,7 @@ export async function listTrips(): Promise<Trip[]> {
 export async function createTrip(payload: TripCreate): Promise<Trip> {
   const res = await fetch(`${API_BASE}/trips/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to create trip')
@@ -128,7 +128,7 @@ export async function createTrip(payload: TripCreate): Promise<Trip> {
 export async function updateTrip(id: number, payload: Partial<TripCreate>): Promise<Trip> {
   const res = await fetch(`${API_BASE}/trips/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to update trip')
@@ -138,13 +138,14 @@ export async function updateTrip(id: number, payload: Partial<TripCreate>): Prom
 export async function deleteTrip(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/trips/${id}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete trip')
 }
 
 // Trip Legs
 export async function listTripLegs(tripId: number): Promise<TripLeg[]> {
-  const res = await fetch(`${API_BASE}/trips/${tripId}/legs`)
+  const res = await fetch(`${API_BASE}/trips/${tripId}/legs`, { headers: getAuthHeaders() })
   if (!res.ok) throw new Error('Failed to list trip legs')
   return res.json()
 }
@@ -152,7 +153,7 @@ export async function listTripLegs(tripId: number): Promise<TripLeg[]> {
 export async function createTripLeg(tripId: number, payload: TripLegCreate): Promise<TripLeg> {
   const res = await fetch(`${API_BASE}/trips/${tripId}/legs`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to create trip leg')
@@ -162,7 +163,7 @@ export async function createTripLeg(tripId: number, payload: TripLegCreate): Pro
 export async function updateTripLeg(tripId: number, legId: number, payload: TripLegUpdate): Promise<TripLeg> {
   const res = await fetch(`${API_BASE}/trips/${tripId}/legs/${legId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to update trip leg')
@@ -172,6 +173,7 @@ export async function updateTripLeg(tripId: number, legId: number, payload: Trip
 export async function deleteTripLeg(tripId: number, legId: number): Promise<void> {
   const res = await fetch(`${API_BASE}/trips/${tripId}/legs/${legId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete trip leg')
 }
@@ -195,7 +197,7 @@ export type TravelSegmentCreate = Omit<TravelSegment, 'id'>
 export type TravelSegmentUpdate = Partial<Omit<TravelSegment, 'id'>>
 
 export async function listTravelSegments(tripId: number): Promise<TravelSegment[]> {
-  const res = await fetch(`${API_BASE}/trips/${tripId}/travel`)
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel`, { headers: getAuthHeaders() })
   if (!res.ok) throw new Error('Failed to list travel segments')
   return res.json()
 }
@@ -203,7 +205,7 @@ export async function listTravelSegments(tripId: number): Promise<TravelSegment[
 export async function createTravelSegment(tripId: number, payload: TravelSegmentCreate): Promise<TravelSegment> {
   const res = await fetch(`${API_BASE}/trips/${tripId}/travel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to create travel segment')
@@ -213,7 +215,7 @@ export async function createTravelSegment(tripId: number, payload: TravelSegment
 export async function updateTravelSegment(tripId: number, segmentId: number, payload: TravelSegmentUpdate): Promise<TravelSegment> {
   const res = await fetch(`${API_BASE}/trips/${tripId}/travel/${segmentId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Failed to update travel segment')
@@ -221,7 +223,7 @@ export async function updateTravelSegment(tripId: number, segmentId: number, pay
 }
 
 export async function deleteTravelSegment(tripId: number, segmentId: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/trips/${tripId}/travel/${segmentId}`, { method: 'DELETE' })
+  const res = await fetch(`${API_BASE}/trips/${tripId}/travel/${segmentId}`, { method: 'DELETE', headers: getAuthHeaders() })
   if (!res.ok) throw new Error('Failed to delete travel segment')
 }
 
