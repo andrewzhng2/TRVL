@@ -147,7 +147,7 @@ function TripsPage() {
   return (
     <Stack gap="md">
       <Group justify="space-between" align="center">
-        <Title order={2}>Trips</Title>
+        <Title order={2}>Your Trips</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={openAdd} w={160}>Add Trip</Button>
       </Group>
 
@@ -159,6 +159,13 @@ function TripsPage() {
                 <Title order={4} c="white">{trip.name || 'Untitled trip'}</Title>
                 <ActionIcon variant="white" onClick={() => openEditTrip(trip)} aria-label="Edit Trip">
                   <IconPencil size={16} />
+                </ActionIcon>
+                <ActionIcon 
+                  variant="white"
+                  aria-label={`Show map for ${getTripCity(trip)}`}
+                  onClick={() => setOpenMapTripIds(prev => { const next = new Set(prev); if (next.has(trip.id)) next.delete(trip.id); else next.add(trip.id); return next; })}
+                >
+                  <IconMapPin size={16} />
                 </ActionIcon>
                 <ActionIcon 
                   variant="white" 
@@ -189,15 +196,6 @@ function TripsPage() {
             <Stack gap={2}>
               <Group gap={12} align="center">
                 <Text c="black">{trip.start_date ?? 'Start'} → {trip.end_date ?? 'End'}</Text>
-                <ActionIcon 
-                  color="blue"
-                  radius="md"
-                  variant={openMapTripIds.has(trip.id) ? 'filled' : 'outline'} 
-                  aria-label={`Show map for ${getTripCity(trip)}`}
-                  onClick={() => setOpenMapTripIds(prev => { const next = new Set(prev); if (next.has(trip.id)) next.delete(trip.id); else next.add(trip.id); return next; })}
-                >
-                  <IconMapPin size={16} />
-                </ActionIcon>
               </Group>
               {trip.legs && trip.legs.length > 0 && (
                 <Text size="sm" c="black">

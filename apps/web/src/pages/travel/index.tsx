@@ -337,10 +337,40 @@ function TripTravel() {
                         />
                         <Stack gap={2}>
                           <Group gap="xs">
-                            <Text fw={500} style={{ fontSize: '2rem' }}>Travel</Text>
-                            <Badge size="sm" variant="light">Custom</Badge>
+                            <Text fw={500} style={{ fontSize: '2rem' }}>{seg.title || 'Travel'}</Text>
+                            <Badge size="sm" variant="light">{seg.badge || 'Custom'}</Badge>
                           </Group>
+                          {(seg.start_date || seg.end_date) && (
+                            <Text size="sm" c="dimmed">{seg.start_date ?? ''}{(seg.start_date || seg.end_date) ? ' → ' : ''}{seg.end_date ?? ''}</Text>
+                          )}
                         </Stack>
+                      </Group>
+                      <Group gap="xs">
+                        <ActionIcon aria-label="Edit" variant="subtle" onClick={() => {
+                          setEditing(seg)
+                          setEditCtx({ edgeType: 'custom', fromId: seg.from_leg_id ?? undefined, toId: seg.to_leg_id ?? undefined })
+                          setEditError(null)
+                          setEditForm({
+                            title: seg.title || 'Travel',
+                            badge: seg.badge || 'Custom',
+                            transport: (seg.transport_type as TransportType),
+                            start: seg.start_date ?? null,
+                            end: seg.end_date ?? null,
+                          })
+                          openEdit()
+                        }}>
+                          <IconPencil size={36} />
+                        </ActionIcon>
+                        <ActionIcon aria-label="Delete" variant="subtle" color="red" onClick={async () => {
+                          try {
+                            await deleteTravelSegment(trip.id, seg.id)
+                            setSegments(curr => curr.filter(s => s.id !== seg.id))
+                          } catch (e) {
+                            console.error('Failed to delete travel segment', e)
+                          }
+                        }}>
+                          <IconTrash size={36} />
+                        </ActionIcon>
                       </Group>
                     </Group>
                   </Card>

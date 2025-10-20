@@ -12,7 +12,7 @@ import {
   
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
-import { IconPencil, IconPlus, IconTrash, IconGripVertical, IconStar, IconStarFilled } from '@tabler/icons-react'
+import { IconPencil, IconPlus, IconTrash, IconStar, IconStarFilled } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import { 
@@ -230,7 +230,6 @@ function TripLegsManager({ tripId, tripName, onStarChange }: TripLegsManagerProp
             <Card key={leg.id} withBorder radius="md" p="md">
               <Group justify="space-between" align="center">
                 <Group gap="md">
-                  <IconGripVertical size={16} color="gray" />
                   <Stack gap={2}>
                     <Group gap="xs">
                       <Text fw={500}>{leg.name}</Text>
