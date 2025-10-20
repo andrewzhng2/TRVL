@@ -24,6 +24,23 @@ const START_HOUR_24 = 0 // 12 AM
 const END_HOUR_24 = 24 // 12 PM (exclusive bound for label helper)
 const SCROLL_START_HOUR_24 = 8 // 8 AM - where scroll starts
 
+function getCategoryBackground(category: Category): string {
+  switch (category) {
+    case 'activities':
+      // darker pastel orange
+      return '#FFCC99'
+    case 'food':
+      // darker pastel red
+      return '#FFB3B3'
+    case 'clubs':
+      // darker pastel yellow
+      return '#FFE699'
+    case 'hotels':
+    default:
+      return '#FFFFFF'
+  }
+}
+
 function formatHourLabel(hour24: number): string {
   const date = new Date()
   date.setHours(hour24, 0, 0, 0)
@@ -66,6 +83,26 @@ function EventsPanel({
             onChange={val => val && onChangeCategory(val as Category)}
             w={160}
             size="xs"
+            styles={{
+              input: {
+                backgroundColor: getCategoryBackground(selected),
+                border: '1px solid #000000',
+                color: '#000000',
+              },
+              dropdown: {
+                backgroundColor: '#FFFFFF',
+                border: 'none',
+                color: '#000000',
+              },
+            }}
+            renderOption={({ option }) => {
+              const value = option.value as Category
+              return (
+                <Box style={{ backgroundColor: getCategoryBackground(value), border: value === 'hotels' ? '1px solid #000000' : 'none', borderRadius: 4, padding: 6 }}>
+                  <Text size="sm" style={{ color: '#000000' }}>{option.label}</Text>
+                </Box>
+              )
+            }}
           />
         </Group>
 
@@ -91,7 +128,7 @@ function EventsPanel({
                   }
                 }}
                 onDragEnd={() => undefined}
-                style={{ cursor: 'grab', minHeight: CARD_MIN_HEIGHT, width: '100%', minWidth: 0, overflow: 'hidden' }}
+                style={{ cursor: 'grab', minHeight: CARD_MIN_HEIGHT, width: '100%', minWidth: 0, overflow: 'hidden', backgroundColor: getCategoryBackground(ev.category), border: '1px solid #000000' }}
               >
                 <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Text fw={600} size="sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
@@ -157,7 +194,7 @@ function ScheduleEventCard({
       }}
       style={{ height: '100%' }}
     >
-      <Paper withBorder p="xs" radius={0} style={{ height: '100%', width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', alignItems: 'flex-start', overflow: 'hidden', cursor: 'grab', position: 'relative' }}>
+      <Paper withBorder p="xs" radius={0} style={{ height: '100%', width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', alignItems: 'flex-start', overflow: 'hidden', cursor: 'grab', position: 'relative', backgroundColor: getCategoryBackground(event.category), border: '1px solid #000000' }}>
         <Box style={{ width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', maxWidth: '100%' }}>{event.title}</Text>
           <Text size="xs" c="dimmed">Desire: {typeof event.desire === 'number' ? event.desire.toFixed(1) : '—'}</Text>
