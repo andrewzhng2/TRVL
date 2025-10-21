@@ -1,4 +1,4 @@
-import { Stack, Title, Text, Card, Group, Badge, Menu, ActionIcon, Button, Modal, Select, Textarea, TextInput } from '@mantine/core'
+import { Stack, Title, Text, Card, Group, Badge, ActionIcon, Textarea } from '@mantine/core'
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { listTrips, type Trip } from '../../api/client'

@@ -1,6 +1,6 @@
 import { Button, Center, Paper, Stack, Text, Title } from '@mantine/core'
 import { useEffect, useState } from 'react'
-import { loginWithGoogle, type SessionRead } from '../../api/client'
+import { loginWithGoogle } from '../../api/client'
 
 function LoginPage() {
   const [error, setError] = useState<string | null>(null)

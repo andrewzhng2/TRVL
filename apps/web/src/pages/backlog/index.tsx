@@ -38,7 +38,7 @@ function TripBacklog() {
     )
   }
 
-  return <BacklogBoard tripId={trip.id} />
+  return <BacklogBoard />
 }
 
 export default TripBacklog

@@ -152,7 +152,7 @@ function TripItinerary() {
           </ScrollArea.Autosize>
         </Stack>
         <Box style={{ width: '100%', height: '100%' }}>
-          <ItineraryMap stops={orderedStops} fallbackQuery={trip.name} geocodeContext={trip.name} />
+          <ItineraryMap stops={orderedStops} geocodeContext={trip.name} />
         </Box>
       </Paper>
     </Stack>
